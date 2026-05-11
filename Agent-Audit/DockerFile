@@ -1,1 +1,3 @@
-FROM node:debian-slim
+FROM node:alpine:latest
+WORKDIR /app
+
