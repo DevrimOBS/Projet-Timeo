@@ -1,45 +1,52 @@
 services:
   agent:
-    build: ./Agent-Audit
+    build:
+      context: .
+      dockerfile: infra/docker/agent.Dockerfile
     container_name: novisec-agent
     volumes:
-      # Accès au socket Docker en lecture seule selon le CDC (4.2)
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - api
     networks:
       - novisec-net
 
-  backend:
-    build: ./Dashboard/backend  # Node.js (NestJS) ou Python (FastAPI)
-    container_name: novisec-backend
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    container_name: novisec-api
     ports:
       - "3000:3000"
     environment:
       - DB_HOST=db
+      - DB_PORT=5432
       - DB_USER=novisec
-      - DB_PASS=novisec_secure_pass
+      - DB_PASSWORD=novisec
       - DB_NAME=novisec_db
     depends_on:
       - db
     networks:
       - novisec-net
 
-  frontend:
-    build: ./Dashboard/frontend # Vue.js ou React.js
-    container_name: novisec-frontend
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+    container_name: novisec-web
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
     depends_on:
-      - backend
+      - api
     networks:
       - novisec-net
 
   db:
-    image: postgres:16-alpine # PostgreSQL selon le CDC (4.1)
+    image: postgres:16-alpine
     container_name: novisec-db
     environment:
       - POSTGRES_USER=novisec
-      - POSTGRES_PASSWORD=novisec_secure_pass
+      - POSTGRES_PASSWORD=novisec
       - POSTGRES_DB=novisec_db
     volumes:
       - db-data:/var/lib/postgresql/data

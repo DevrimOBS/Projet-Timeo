@@ -10,21 +10,21 @@ import (
 	"time"
 )
 
-type Containerinfo struct {
+type ContainerInfo struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Image  string `json:"image"`
 	Status string `json:"status"`
 }
-type Scanresult struct {
+type ScanResult struct {
 	AgentID    string          `json:"agent_id"`
 	Timestamp  string          `json:"timestamp"`
-	Containers []Containerinfo `json:"containers"`
+	Containers []ContainerInfo `json:"containers"`
 }
 
-func listContainers(ctx context.Context) ([]Containerinfo, error) {
+func listContainers(ctx context.Context) ([]ContainerInfo, error) {
 	_ = ctx
-	return []Containerinfo{}, nil
+	return []ContainerInfo{}, nil
 }
 
 func main() {
@@ -41,13 +41,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error listing containers: %v", err)
 	}
-	report := Scanresult{
+	report := ScanResult{
 		AgentID:    agentID,
 		Timestamp:  time.Now().Format(time.RFC3339),
-		Containers: make([]Containerinfo, 0, len(containers)),
+		Containers: make([]ContainerInfo, 0, len(containers)),
 	}
 	for _, c := range containers {
-		report.Containers = append(report.Containers, Containerinfo{
+		report.Containers = append(report.Containers, ContainerInfo{
 			ID:     c.ID,
 			Name:   c.Name,
 			Image:  c.Image,
