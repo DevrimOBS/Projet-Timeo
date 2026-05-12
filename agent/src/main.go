@@ -1,72 +1,117 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"log"
-	"net/http"
-	"os"
 	"time"
+
+	"novisec-docker-auditor/agent/src/config"
+	dockerclient "novisec-docker-auditor/agent/src/docker"
+	"novisec-docker-auditor/agent/src/models"
+	"novisec-docker-auditor/agent/src/scanner"
+	"novisec-docker-auditor/agent/src/transport"
 )
 
-type ContainerInfo struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Image  string `json:"image"`
-	Status string `json:"status"`
-}
-type ScanResult struct {
-	AgentID    string          `json:"agent_id"`
-	Timestamp  string          `json:"timestamp"`
-	Containers []ContainerInfo `json:"containers"`
-}
-
-func listContainers(ctx context.Context) ([]ContainerInfo, error) {
-	_ = ctx
-	return []ContainerInfo{}, nil
-}
-
 func main() {
-	ctx := context.Background()
-	dashboardURL := os.Getenv("DASHBOARD_URL")
-	if dashboardURL == "" {
-		dashboardURL = "http://localhost:8080/api/scan-results"
-	}
-	agentID := os.Getenv("AGENT_ID")
-	if agentID == "" {
-		agentID = "novisec-agent-001"
-	}
-	containers, err := listContainers(ctx)
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Error listing containers: %v", err)
+		log.Fatalf("configuration error: %v", err)
 	}
-	report := ScanResult{
-		AgentID:    agentID,
-		Timestamp:  time.Now().Format(time.RFC3339),
-		Containers: make([]ContainerInfo, 0, len(containers)),
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ScanTimeout)
+	defer cancel()
+
+	containers, err := dockerclient.Discover(ctx, cfg.DockerSocket)
+	if err != nil {
+		log.Fatalf("docker discovery error: %v", err)
 	}
-	for _, c := range containers {
-		report.Containers = append(report.Containers, ContainerInfo{
-			ID:     c.ID,
-			Name:   c.Name,
-			Image:  c.Image,
-			Status: c.Status,
+
+	imageFindings := make(map[string][]models.Vulnerability)
+	reports := make([]models.ContainerReport, 0, len(containers))
+	for _, container := range containers {
+		imageRef := container.ReferenceImage()
+		findings, ok := imageFindings[imageRef]
+		if !ok {
+			if cfg.TrivyEnabled {
+				findings, err = scanner.ScanImage(ctx, cfg.TrivyPath, imageRef)
+				if err != nil {
+					log.Printf("scan error for %s: %v", imageRef, err)
+					findings = []models.Vulnerability{}
+				}
+			} else {
+				findings = []models.Vulnerability{}
+			}
+			imageFindings[imageRef] = findings
+		}
+
+		highestScore := highestCVSS(findings)
+		reports = append(reports, models.ContainerReport{
+			ID:                 container.ID,
+			Name:               container.DisplayName(),
+			Image:              imageRef,
+			Status:             container.Status,
+			CreatedAt:          time.Unix(container.Created, 0).UTC(),
+			Vulnerabilities:    findings,
+			VulnerabilityCount: len(findings),
+			HighestCVSS:        highestScore,
+			RiskLevel:          riskLevel(highestScore),
 		})
 	}
-	body, err := json.Marshal(report)
-	if err != nil {
-		log.Fatalf("Error marshaling report: %v", err)
+
+	report := models.ScanReport{
+		AgentID:    cfg.AgentID,
+		Timestamp:  time.Now().UTC(),
+		ScanType:   cfg.ScanType,
+		Containers: reports,
+		Summary:    summarize(reports),
 	}
-	req, err := http.NewRequest("POST", dashboardURL, bytes.NewBuffer(body))
-	if err != nil {
-		log.Fatalf("Error creating HTTP request: %v", err)
+
+	if err := transport.SendReport(ctx, cfg.Endpoint(), report, cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify); err != nil {
+		log.Fatalf("report send error: %v", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatalf("Error sending report: %v", err)
+
+	log.Printf("scan completed: %d containers, %d vulnerabilities, avg risk %.2f", len(report.Containers), report.Summary.TotalVulnerabilities, report.Summary.GlobalRiskScore)
+}
+
+func highestCVSS(findings []models.Vulnerability) float64 {
+	highest := 0.0
+	for _, finding := range findings {
+		if finding.CVSS > highest {
+			highest = finding.CVSS
+		}
 	}
-	defer resp.Body.Close()
-	log.Printf("scan envoyé, status: %s", resp.Status)
+	return highest
+}
+
+func riskLevel(score float64) string {
+	switch {
+	case score >= 9.0:
+		return "CRITIQUE"
+	case score >= 7.0:
+		return "HAUT"
+	case score >= 4.0:
+		return "MOYEN"
+	case score > 0:
+		return "FAIBLE"
+	default:
+		return "SAIN"
+	}
+}
+
+func summarize(containers []models.ContainerReport) models.Summary {
+	summary := models.Summary{TotalContainers: len(containers)}
+	var totalRisk float64
+	for _, container := range containers {
+		if container.VulnerabilityCount == 0 {
+			summary.HealthyContainers++
+		} else {
+			summary.VulnerableContainers++
+		}
+		summary.TotalVulnerabilities += container.VulnerabilityCount
+		totalRisk += container.HighestCVSS
+	}
+	if len(containers) > 0 {
+		summary.GlobalRiskScore = totalRisk / float64(len(containers))
+	}
+	return summary
 }

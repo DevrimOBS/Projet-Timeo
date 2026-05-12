@@ -1,0 +1,99 @@
+novisec-docker-auditor/
+├── README.md                      -> Présentation du projet, installation, lancement global.
+├── .gitignore                     -> Fichiers à ne pas versionner (.env, binaires, cache...).
+├── .env.example                   -> Exemple des variables d’environnement à renseigner.
+├── docker-compose.yml             -> Lance toute la solution en local : agent, API, web, DB.
+│
+├── docs/                          -> Documentation projet et suivi d’équipe.
+│   ├── cahier-des-charges.pdf     -> Le document de référence fonctionnel et technique.
+│   ├── architecture.md            -> Explication des composants et de leurs échanges.
+│   ├── api-spec.md                -> Contrat API : endpoints, requêtes, réponses JSON.
+│   └── backlog.md                 -> Liste des tâches et objectifs par semaine.
+│
+├── infra/                         -> Tout ce qui concerne le déploiement et l’environnement.
+│   ├── docker/
+│   │   ├── agent.Dockerfile       -> Image Docker de l’agent de scan.
+│   │   ├── api.Dockerfile         -> Image Docker du backend API.
+│   │   └── web.Dockerfile         -> Image Docker du frontend/dashboard.
+│   ├── compose/
+│   │   ├── dev.compose.yml        -> Variante compose pour le développement local.
+│   │   └── prod.compose.yml       -> Variante compose pour une mise en production.
+│   └── scripts/
+│       ├── init-db.sh             -> Initialise la base PostgreSQL.
+│       └── update-cve-db.sh       -> Met à jour la base de vulnérabilités avant scan.
+│
+├── agent/                         -> Le conteneur d’audit Docker en lecture seule.
+│   ├── src/
+│   │   ├── main.go                -> Point d’entrée : orchestre découverte, scan et envoi API.
+│   │   ├── config/
+│   │   │   └── config.go          -> Charge la config (.env, URL API, agent ID, timeouts...).
+│   │   ├── docker/
+│   │   │   └── discover.go        -> Liste les conteneurs/images via le socket Docker.
+│   │   ├── scanner/
+│   │   │   ├── trivy.go           -> Lance Trivy ou le moteur de détection choisi.
+│   │   │   └── normalize.go       -> Uniformise les résultats CVE/CVSS/CWE.
+│   │   ├── models/
+│   │   │   └── report.go          -> Structures Go des rapports de scan.
+│   │   └── transport/
+│   │       └── api.go             -> Envoie les résultats à l’API REST sécurisée.
+│   ├── tests/                     -> Tests unitaires de l’agent.
+│   ├── configs/
+│   │   └── agent.example.yaml     -> Exemple de configuration de l’agent.
+│   ├── go.mod                     -> Dépendances Go du projet agent.
+│   ├── Dockerfile                 -> Build final du conteneur agent.
+│   └── README.md                  -> Comment lancer et tester uniquement l’agent.
+│
+├── api/                           -> Backend central qui reçoit, stocke et expose les scans.
+│   ├── src/
+│   │   ├── main.ts                -> Point d’entrée du backend (NestJS par ex.).
+│   │   ├── modules/
+│   │   │   ├── auth/              -> Authentification, rôles Admin/Viewer, sécurité d’accès.
+│   │   │   ├── scans/             -> Réception et gestion des scans envoyés par l’agent.
+│   │   │   ├── containers/        -> Gestion des conteneurs détectés.
+│   │   │   ├── vulnerabilities/   -> Gestion des CVE, score CVSS, criticité, remédiations.
+│   │   │   ├── reports/           -> Génération des vues synthétiques pour le dashboard.
+│   │   │   └── scheduling/        -> Déclenchement manuel/ciblé/CRON des analyses.
+│   │   ├── common/                -> Helpers, constantes, middlewares, utilitaires.
+│   │   ├── database/              -> Connexion DB, ORM, repository, migrations.
+│   │   └── dto/                   -> Schémas d’entrée/sortie de l’API.
+│   ├── tests/                     -> Tests backend.
+│   ├── package.json               -> Dépendances Node.js.
+│   ├── Dockerfile                 -> Build du backend.
+│   └── README.md                  -> Lancement du backend seul.
+│
+├── web/                           -> Interface de consultation des résultats.
+│   ├── public/                    -> Assets statiques (logo, icônes...).
+│   ├── src/
+│   │   ├── main.tsx               -> Point d’entrée frontend.
+│   │   ├── components/            -> Composants réutilisables (cards, tableaux, badges...).
+│   │   ├── pages/
+│   │   │   ├── Overview.tsx       -> Vue d’ensemble : conteneurs sains/vulnérables, score global.
+│   │   │   ├── Containers.tsx     -> Liste et détail des conteneurs analysés.
+│   │   │   ├── Vulnerabilities.tsx-> Matrice de criticité et liste des CVE.
+│   │   │   └── Reports.tsx        -> Historique et rapports détaillés.
+│   │   ├── services/
+│   │   │   └── api.ts             -> Appels HTTP vers le backend.
+│   │   ├── store/                 -> État global frontend.
+│   │   ├── types/                 -> Types TypeScript partagés côté front.
+│   │   └── layouts/               -> Structure visuelle globale du dashboard.
+│   ├── package.json               -> Dépendances frontend.
+│   ├── Dockerfile                 -> Build de l’interface web.
+│   └── README.md                  -> Lancement du front seul.
+│
+├── database/                      -> Structure et évolution de la base PostgreSQL.
+│   ├── schema/
+│   │   └── schema.sql             -> Création initiale des tables principales.
+│   ├── migrations/                -> Historique des changements de structure DB.
+│   └── seeds/
+│       └── seed.sql               -> Données de test pour démarrer rapidement.
+│
+├── shared/                        -> Éléments communs entre agent, API et web.
+│   ├── dto/                       -> Objets d’échange communs.
+│   ├── schemas/                   -> Schémas JSON/validation.
+│   ├── constants/                 -> Constantes globales (criticité, types de scan...).
+│   └── utils/                     -> Fonctions utilitaires partagées.
+│
+└── tests/                         -> Tests globaux de la solution.
+    ├── integration/               -> Vérifie l’échange agent -> API -> DB.
+    ├── e2e/                       -> Vérifie le fonctionnement complet de bout en bout.
+    └── fixtures/                  -> Jeux de données de test.
