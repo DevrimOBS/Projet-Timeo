@@ -14,15 +14,15 @@ import (
 	"novisec-docker-auditor/agent/src/models"
 )
 
-func SendReport(ctx context.Context, endpoint string, report models.ScanReport, token string, timeout time.Duration, insecureSkipTLSVerify bool) error {
+func SendReport(ctx context.Context, endpoint string, report models.ScanReport, token string, timeout time.Duration, insecureSkipTLSVerify bool) (string, error) {
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {
-		return fmt.Errorf("report endpoint is required")
+		return "", fmt.Errorf("report endpoint is required")
 	}
 
 	payload, err := json.Marshal(report)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	client := &http.Client{Timeout: timeout}
@@ -36,7 +36,7 @@ func SendReport(ctx context.Context, endpoint string, report models.ScanReport, 
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return err
+		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if token != "" {
@@ -45,14 +45,21 @@ func SendReport(ctx context.Context, endpoint string, report models.ScanReport, 
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("api returned %s: %s", resp.Status, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf("api returned %s: %s", resp.Status, strings.TrimSpace(string(body)))
 	}
 
-	return nil
+	var response struct {
+		ScanID string `json:"scanId"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return "", err
+	}
+
+	return response.ScanID, nil
 }

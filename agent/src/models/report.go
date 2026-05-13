@@ -4,7 +4,7 @@ import "time"
 
 type Vulnerability struct {
 	CVE              string   `json:"cve"`
-	Package          string   `json:"package,omitempty"`
+	Package          string   `json:"package_name,omitempty"`
 	InstalledVersion string   `json:"installed_version,omitempty"`
 	FixedVersion     string   `json:"fixed_version,omitempty"`
 	Severity         string   `json:"severity"`

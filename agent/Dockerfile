@@ -1,4 +1,6 @@
 FROM golang:1.22-alpine
 WORKDIR /app
-COPY . .
-CMD ["go", "run", "./src"]
+COPY go.mod ./
+COPY src ./src
+RUN go build -o /usr/local/bin/novisec-agent ./src
+ENTRYPOINT ["novisec-agent"]

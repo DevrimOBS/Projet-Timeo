@@ -6,11 +6,12 @@ export class CreateVulnerabilityDto {
   cve!: string;
 
   @IsOptional()
-  @IsString()
-  cwe?: string;
+  @IsArray()
+  @IsString({ each: true })
+  cwe?: string[];
 
   @IsString()
-  packageName!: string;
+  package_name!: string;
 
   @IsOptional()
   @IsString()
@@ -32,11 +33,19 @@ export class CreateVulnerabilityDto {
   @IsOptional()
   @IsString()
   remediation?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  source?: string;
 }
 
 export class CreateContainerScanDto {
   @IsString()
-  containerId!: string;
+  id!: string;
 
   @IsString()
   name!: string;
@@ -47,24 +56,55 @@ export class CreateContainerScanDto {
   @IsString()
   status!: string;
 
+  @IsOptional()
+  @IsDateString()
+  created_at?: string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateVulnerabilityDto)
   vulnerabilities!: CreateVulnerabilityDto[];
 }
 
+export class CreateSummaryDto {
+  @IsNumber()
+  @Min(0)
+  total_containers!: number;
+
+  @IsNumber()
+  @Min(0)
+  healthy_containers!: number;
+
+  @IsNumber()
+  @Min(0)
+  vulnerable_containers!: number;
+
+  @IsNumber()
+  @Min(0)
+  total_vulnerabilities!: number;
+
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  global_risk_score!: number;
+}
+
 export class CreateScanDto {
   @IsString()
-  agentId!: string;
+  agent_id!: string;
 
   @IsDateString()
-  startedAt!: string;
+  timestamp!: string;
 
-  @IsDateString()
-  finishedAt!: string;
+  @IsString()
+  scan_type!: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateContainerScanDto)
   containers!: CreateContainerScanDto[];
+
+  @ValidateNested()
+  @Type(() => CreateSummaryDto)
+  summary!: CreateSummaryDto;
 }

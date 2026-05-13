@@ -1,0 +1,30 @@
+
+Voici une description textuelle structurée de ton architecture, conçue pour être interprétée facilement par une IA ou un développeur. Elle suit le flux logique des données étape par étape :
+
+Flux de l'Architecture du Scanner de Conteneurs
+
+Étape 1 : Interaction Utilisateur – L'utilisateur accède à l'interface via une requête GET sur le Dashboard UI.  
+
+
+Étape 2 : Requête Client – Le Dashboard envoie une demande sécurisée en HTTPS/TLS à l'API Centrale, qui fait office d'orchestrateur.  
+
+
+Étape 3 : Persistance des données – L'API centrale enregistre la demande ou l'état dans la base de données PostgreSQL (DB Write).  
+
+
+Étape 4 : Gestion de la file d'attente – Pour rendre le système asynchrone, l'API place la tâche de scan dans une File d'attente (utilisant Redis ou RabbitMQ).  
++1
+
+
+Étape 5 : Récupération par l'Agent – L'Agent Audith (scanner Docker) récupère la tâche de scan disponible dans la file d'attente via une opération PULL.  
++1
+
+
+Étapes 6 & 7 : Analyse Technique – L'Agent effectue deux actions simultanées : il interroge le Cluster Docker pour analyser les images et consulte une Cache CVE locale (NVD) pour identifier les vulnérabilités.  
+
+
+Étape 8 : Transmission des résultats – Une fois le scan terminé, l'Agent renvoie les résultats à l'API Centrale via une requête PUSH.  
++1
+
+
+Étape 9 : Mise à jour de l'affichage – L'API transmet les nouvelles données au Dashboard pour rafraîchir l'affichage de l'utilisateur.  

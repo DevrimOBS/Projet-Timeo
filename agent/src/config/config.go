@@ -28,7 +28,7 @@ type Config struct {
 func Load() (Config, error) {
 	cfg := Config{
 		AgentID:        "novisec-agent-001",
-		APIURL:         "http://api:3000",
+		APIURL:         "http://api:3001",
 		DockerSocket:   "/var/run/docker.sock",
 		TrivyPath:      "trivy",
 		TrivyEnabled:   true,
@@ -86,6 +86,23 @@ func (c Config) Endpoint() string {
 		return trimmed + "api/scans"
 	}
 	return trimmed + "/api/scans"
+}
+
+func (c Config) TaskClaimEndpoint() string {
+	trimmed := strings.TrimSpace(c.APIURL)
+	if trimmed == "" {
+		return ""
+	}
+	return strings.TrimRight(trimmed, "/") + "/api/scan-tasks/claim"
+}
+
+func (c Config) TaskCompleteEndpoint(taskID string) string {
+	trimmed := strings.TrimSpace(c.APIURL)
+	taskID = strings.TrimSpace(taskID)
+	if trimmed == "" || taskID == "" {
+		return ""
+	}
+	return strings.TrimRight(trimmed, "/") + "/api/scan-tasks/" + taskID + "/complete"
 }
 
 func candidateConfigFiles() []string {

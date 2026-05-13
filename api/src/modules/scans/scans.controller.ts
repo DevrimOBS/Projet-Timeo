@@ -12,7 +12,7 @@ export class ScansController {
   constructor(private readonly scansService: ScansService) {}
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.AGENT)
   createScan(@Body() payload: CreateScanDto) {
     return this.scansService.createScan(payload);
   }

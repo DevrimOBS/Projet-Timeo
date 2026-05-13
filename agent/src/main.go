@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"strings"
 	"time"
 
 	"novisec-docker-auditor/agent/src/config"
@@ -21,9 +22,22 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ScanTimeout)
 	defer cancel()
 
+	task, err := transport.ClaimTask(ctx, cfg.TaskClaimEndpoint(), cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify)
+	if err != nil {
+		log.Printf("task claim error: %v", err)
+	}
+
 	containers, err := dockerclient.Discover(ctx, cfg.DockerSocket)
 	if err != nil {
 		log.Fatalf("docker discovery error: %v", err)
+	}
+
+	scanType := cfg.ScanType
+	if task != nil {
+		if task.Mode != "" {
+			scanType = task.Mode
+		}
+		containers = filterContainers(containers, task.ContainerIDs)
 	}
 
 	imageFindings := make(map[string][]models.Vulnerability)
@@ -61,13 +75,20 @@ func main() {
 	report := models.ScanReport{
 		AgentID:    cfg.AgentID,
 		Timestamp:  time.Now().UTC(),
-		ScanType:   cfg.ScanType,
+		ScanType:   scanType,
 		Containers: reports,
 		Summary:    summarize(reports),
 	}
 
-	if err := transport.SendReport(ctx, cfg.Endpoint(), report, cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify); err != nil {
+	scanID, err := transport.SendReport(ctx, cfg.Endpoint(), report, cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify)
+	if err != nil {
 		log.Fatalf("report send error: %v", err)
+	}
+
+	if task != nil {
+		if err := transport.CompleteTask(ctx, cfg.TaskCompleteEndpoint(task.ID), cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify, transport.TaskActionPayload{ScanID: scanID, Status: "completed"}); err != nil {
+			log.Printf("task completion error: %v", err)
+		}
 	}
 
 	log.Printf("scan completed: %d containers, %d vulnerabilities, avg risk %.2f", len(report.Containers), report.Summary.TotalVulnerabilities, report.Summary.GlobalRiskScore)
@@ -114,4 +135,27 @@ func summarize(containers []models.ContainerReport) models.Summary {
 		summary.GlobalRiskScore = totalRisk / float64(len(containers))
 	}
 	return summary
+}
+
+func filterContainers(containers []dockerclient.Container, containerIDs []string) []dockerclient.Container {
+	if len(containerIDs) == 0 {
+		return containers
+	}
+
+	allowed := make(map[string]struct{}, len(containerIDs))
+	for _, id := range containerIDs {
+		trimmed := strings.TrimSpace(id)
+		if trimmed != "" {
+			allowed[trimmed] = struct{}{}
+		}
+	}
+
+	filtered := make([]dockerclient.Container, 0, len(containers))
+	for _, container := range containers {
+		if _, ok := allowed[container.ID]; ok {
+			filtered = append(filtered, container)
+		}
+	}
+
+	return filtered
 }

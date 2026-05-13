@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
-import { Pool, QueryResult } from "pg";
+import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
 @Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
@@ -25,8 +25,23 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     await this.pool.end();
   }
 
-  query<T = any>(text: string, params: unknown[] = []): Promise<QueryResult<T>> {
+  query<T extends QueryResultRow = QueryResultRow>(text: string, params: unknown[] = []): Promise<QueryResult<T>> {
     return this.pool.query<T>(text, params);
+  }
+
+  async transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await callback(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   private async ensureSchema(): Promise<void> {
@@ -34,8 +49,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE TABLE IF NOT EXISTS scans (
         id UUID PRIMARY KEY,
         agent_id TEXT NOT NULL,
+        scan_type TEXT NOT NULL,
         started_at TIMESTAMPTZ NOT NULL,
         finished_at TIMESTAMPTZ NOT NULL,
+        summary_total_containers INTEGER NOT NULL DEFAULT 0,
+        summary_healthy_containers INTEGER NOT NULL DEFAULT 0,
+        summary_vulnerable_containers INTEGER NOT NULL DEFAULT 0,
+        summary_total_vulnerabilities INTEGER NOT NULL DEFAULT 0,
+        summary_global_risk_score NUMERIC(6,2) NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
@@ -47,7 +68,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         container_id TEXT NOT NULL,
         name TEXT NOT NULL,
         image TEXT NOT NULL,
-        status TEXT NOT NULL
+        status TEXT NOT NULL,
+        created_at TIMESTAMPTZ
       );
     `);
 
@@ -64,6 +86,8 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         severity TEXT NOT NULL,
         title TEXT,
         remediation TEXT,
+        description TEXT,
+        source TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
@@ -77,5 +101,25 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+
+    await this.query(`
+      CREATE TABLE IF NOT EXISTS scan_tasks (
+        id UUID PRIMARY KEY,
+        mode TEXT NOT NULL CHECK (mode IN ('MANUAL_GLOBAL', 'MANUAL_TARGET', 'AUTO_CRON')),
+        status TEXT NOT NULL CHECK (status IN ('queued', 'processing', 'completed', 'failed')),
+        requested_by TEXT NOT NULL,
+        requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        claimed_by TEXT,
+        claimed_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        scan_id UUID REFERENCES scans(id) ON DELETE SET NULL,
+        target_container_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+        message TEXT
+      );
+    `);
+
+    await this.query(`CREATE INDEX IF NOT EXISTS idx_scan_tasks_status_requested_at ON scan_tasks (status, requested_at);`);
+    await this.query(`CREATE INDEX IF NOT EXISTS idx_scan_containers_scan_id ON scan_containers (scan_id);`);
+    await this.query(`CREATE INDEX IF NOT EXISTS idx_vulnerabilities_container_row_id ON vulnerabilities (container_row_id);`);
   }
 }

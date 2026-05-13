@@ -10,7 +10,8 @@
     "emitDecoratorMetadata": true,
     "strict": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node","express","pg"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

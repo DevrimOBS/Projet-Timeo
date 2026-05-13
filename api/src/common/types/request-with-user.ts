@@ -2,7 +2,7 @@ import { Request } from "express";
 import { Role } from "../enums/role.enum";
 
 export interface RequestWithUser extends Request {
-  user: {
+  user?: {
     role: Role;
     subject: string;
   };

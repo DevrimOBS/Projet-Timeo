@@ -1,4 +1,5 @@
 export enum Role {
   ADMIN = "admin",
-  VIEWER = "viewer"
+  VIEWER = "viewer",
+  AGENT = "agent"
 }

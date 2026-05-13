@@ -1,36 +1,48 @@
 services:
   agent:
-    build: ./Agent-Audit
+    build: ./agent
     container_name: novisec-agent
+    environment:
+      - AGENT_ID=novisec-agent-001
+      - API_URL=http://api:3001
+      - API_TOKEN=agent-dev-token
+      - TRIVY_ENABLED=true
+      - SCAN_TYPE=MANUAL_GLOBAL
     volumes:
       # Accès au socket Docker en lecture seule selon le CDC (4.2)
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - api
     networks:
       - novisec-net
 
-  backend:
-    build: ./Dashboard/backend  # Node.js (NestJS) ou Python (FastAPI)
-    container_name: novisec-backend
+  api:
+    build: ./api
+    container_name: novisec-api
     ports:
-      - "3000:3000"
+      - "3000:3001"
     environment:
-      - DB_HOST=db
-      - DB_USER=novisec
-      - DB_PASS=novisec_secure_pass
-      - DB_NAME=novisec_db
+      - PORT=3001
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=novisec
+      - POSTGRES_PASSWORD=novisec_secure_pass
+      - POSTGRES_DB=novisec_db
+      - ADMIN_TOKEN=admin-dev-token
+      - VIEWER_TOKEN=viewer-dev-token
+      - AGENT_TOKEN=agent-dev-token
     depends_on:
       - db
     networks:
       - novisec-net
 
   frontend:
-    build: ./Dashboard/frontend # Vue.js ou React.js
+    build: ./web
     container_name: novisec-frontend
     ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - backend
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
     networks:
       - novisec-net
 
@@ -42,12 +54,12 @@ services:
       - POSTGRES_PASSWORD=novisec_secure_pass
       - POSTGRES_DB=novisec_db
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./agent/configs:/app/configs:ro
+      - db-data:/var/lib/postgresql/data
+      - ./database/schema:/docker-entrypoint-initdb.d:ro
     networks:
       - novisec-net
-    profiles:
-      - scanner
+    ports:
+      - "5432:5432"
 
 volumes:
   db-data:
