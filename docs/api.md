@@ -7693,3 +7693,2186 @@ C’est une route simple, propre, et typique d’une API qui expose l’identit�
 
 
 Je me suis arreté a routes.ts
+***
+Oui, là c’est bien un vrai **controller NestJS**.  
+Je te fais le breakdown complet de ce `ReportsController`.
+
+***
+
+# Breakdown de `reports.controller.ts`
+
+## Vue d’ensemble
+
+Ce fichier définit un **controller NestJS** exposant des endpoints HTTP sous le préfixe `/api/reports`. Dans NestJS, un controller regroupe les handlers de routes entrantes, et les décorateurs comme `@Controller()`, `@Get()`, `@Param()` et `@UseGuards()` servent à déclarer les routes, les paramètres et les protections d’accès. [docs.nestjs](https://docs.nestjs.com/guards)
+
+Ici, le controller :
+- dépend de `ReportsService`,
+- protège toutes ses routes avec `BasicAuthGuard` et `RolesGuard`,
+- autorise seulement les rôles `ADMIN` et `VIEWER`,
+- expose trois endpoints :
+  - `GET /api/reports/overview`
+  - `GET /api/reports/matrix`
+  - `GET /api/reports/details/:containerId`
+
+***
+
+## Le code
+
+```ts
+import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import { Roles } from "../../common/decorators/roles.decorator";
+import { Role } from "../../common/enums/role.enum";
+import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
+import { RolesGuard } from "../../common/guards/roles.guard";
+import { ReportsService } from "./reports.service";
+
+@Controller("api/reports")
+@UseGuards(BasicAuthGuard, RolesGuard)
+@Roles(Role.ADMIN, Role.VIEWER)
+export class ReportsController {
+  constructor(private readonly reportsService: ReportsService) {}
+
+  @Get("overview")
+  getOverview() {
+    return this.reportsService.getOverview();
+  }
+
+  @Get("matrix")
+  getMatrix() {
+    return this.reportsService.getMatrix();
+  }
+
+  @Get("details/:containerId")
+  getContainerDetails(@Param("containerId") containerId: string) {
+    return this.reportsService.getContainerDetails(containerId);
+  }
+}
+```
+
+***
+
+# Imports
+
+## `Controller`
+
+```ts
+import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+```
+
+### Rôle
+
+- `Controller` est le décorateur NestJS qui déclare une classe comme contrôleur HTTP.
+- Il permet d’associer un préfixe de route à toute la classe. [docs.nestjs](https://docs.nestjs.com/controllers)
+
+### Ici
+
+```ts
+@Controller("api/reports")
+```
+
+signifie que toutes les routes de cette classe commencent par `/api/reports`.
+
+***
+
+## `Get`
+
+### Rôle
+
+- Décorateur NestJS pour déclarer un handler HTTP GET.
+- Il associe une méthode de classe à une route GET donnée. [docs.nest-js](https://docs.nest-js.fr/controllers)
+
+### Exemple ici
+
+- `@Get("overview")`
+- `@Get("matrix")`
+- `@Get("details/:containerId")`
+
+***
+
+## `Param`
+
+### Rôle
+
+- Décorateur NestJS qui injecte un paramètre de route dans la méthode.
+- Il permet d’accéder à une variable dynamique présente dans l’URL. [dev](https://dev.to/wakeup_flower_8591a6cb6a9/parameter-decorators-in-nestjs-2l5f)
+
+### Exemple ici
+
+```ts
+@Param("containerId") containerId: string
+```
+
+récupère la valeur de `:containerId` depuis l’URL.
+
+***
+
+## `UseGuards`
+
+### Rôle
+
+- Décorateur NestJS qui attache un ou plusieurs guards à un controller ou à une méthode.
+- Quand il est placé au niveau classe, il s’applique à tous les handlers du controller. [github](https://github.com/nestjs/nest/blob/master/packages/common/decorators/core/use-guards.decorator.ts)
+
+### Ici
+
+```ts
+@UseGuards(BasicAuthGuard, RolesGuard)
+```
+
+veut dire que les deux guards seront exécutés pour chaque route du controller.
+
+***
+
+## `Roles`
+
+```ts
+import { Roles } from "../../common/decorators/roles.decorator";
+```
+
+### Rôle
+
+- Décorateur personnalisé qui attache une metadata de rôles à la cible.
+- Cette metadata est ensuite lue par `RolesGuard`. C’est le pattern RBAC classique NestJS. [stackoverflow](https://stackoverflow.com/questions/60254371/authentication-roles-with-guards-decorators-how-to-pass-user-object)
+
+***
+
+## `Role`
+
+```ts
+import { Role } from "../../common/enums/role.enum";
+```
+
+### Rôle
+
+- Enum des rôles applicatifs.
+- Ici, il sert à déclarer les rôles autorisés pour ce controller.
+
+***
+
+## `BasicAuthGuard`
+
+### Rôle
+
+- Guard d’authentification.
+- Il valide la requête, extrait le token Bearer, et injecte probablement `req.user`.
+
+### Dans ton projet
+
+On l’a déjà analysé : il affecte par exemple :
+
+```ts
+req.user = { role: Role.ADMIN, subject: "admin" };
+```
+
+***
+
+## `RolesGuard`
+
+### Rôle
+
+- Guard d’autorisation.
+- Il lit la metadata `@Roles(...)` et vérifie que `req.user.role` fait partie des rôles autorisés. [oneuptime](https://oneuptime.com/blog/post/2026-02-02-nestjs-guards-authorization/view)
+
+***
+
+## `ReportsService`
+
+```ts
+import { ReportsService } from "./reports.service";
+```
+
+### Rôle
+
+- Service métier chargé de produire les données des rapports.
+- Le controller lui délègue toute la logique métier.
+
+### Intérêt architectural
+
+C’est très propre : le controller gère la couche HTTP, le service gère la logique métier. En Nest, les controllers consomment généralement des providers/services via injection de dépendances. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+***
+
+# Décorateur `@Controller("api/reports")`
+
+```ts
+@Controller("api/reports")
+```
+
+## Rôle
+
+- Définir le préfixe de route du controller.
+
+## Effet
+
+Toutes les routes déclarées dans cette classe commenceront par :
+
+```ts
+/api/reports
+```
+
+### Exemples
+
+- `@Get("overview")` → `GET /api/reports/overview`
+- `@Get("matrix")` → `GET /api/reports/matrix`
+- `@Get("details/:containerId")` → `GET /api/reports/details/:containerId`
+
+Les controllers Nest permettent précisément ce regroupement des routes sous un préfixe commun. [blog.logrocket](https://blog.logrocket.com/understanding-controllers-routes-nestjs/)
+
+***
+
+# Décorateur `@UseGuards(BasicAuthGuard, RolesGuard)`
+
+```ts
+@UseGuards(BasicAuthGuard, RolesGuard)
+```
+
+## Rôle
+
+- Attacher deux guards à tout le controller.
+- Les deux s’exécutent avant chaque handler.
+
+## Logique
+
+1. `BasicAuthGuard` authentifie la requête.
+2. `RolesGuard` vérifie que le rôle est autorisé.
+
+### Pourquoi cet ordre a du sens
+
+`RolesGuard` dépend de `req.user`, qui est fourni par `BasicAuthGuard`.  
+Donc il faut d’abord authentifier, puis autoriser.
+
+### Portée
+
+Comme le décorateur est placé sur la classe, il s’applique à :
+
+- `getOverview()`
+- `getMatrix()`
+- `getContainerDetails()`
+
+Nest documente bien que `@UseGuards()` au niveau controller applique les guards à tous les handlers de la classe. [docs.nestjs](https://docs.nestjs.com/guards)
+
+***
+
+# Décorateur `@Roles(Role.ADMIN, Role.VIEWER)`
+
+```ts
+@Roles(Role.ADMIN, Role.VIEWER)
+```
+
+## Rôle
+
+- Déclarer que toutes les routes du controller exigent l’un des rôles :
+  - `ADMIN`
+  - `VIEWER`
+
+## Effet
+
+Si `req.user.role` vaut :
+
+- `Role.ADMIN` → accès autorisé
+- `Role.VIEWER` → accès autorisé
+- `Role.AGENT` → accès refusé
+
+### Important
+
+Comme ce décorateur est au niveau classe, toute la classe hérite de cette restriction, sauf si une méthode la surcharge avec un autre `@Roles(...)`. Le pattern méthode > classe est justement celui géré par `Reflector.getAllAndOverride(...)` dans ton `RolesGuard`. [docs.nestjs](https://docs.nestjs.com/security/authorization)
+
+***
+
+# Classe `ReportsController`
+
+```ts
+export class ReportsController {
+```
+
+## Rôle
+
+- Définir le controller des rapports.
+- Il regroupe les endpoints de consultation/reporting.
+
+***
+
+# Constructeur
+
+```ts
+constructor(private readonly reportsService: ReportsService) {}
+```
+
+## Variable / propriété
+
+- `reportsService` : instance injectée de `ReportsService`.
+
+## Rôle
+
+- Permettre au controller d’appeler la logique métier du service.
+
+## Injection de dépendance
+
+Nest utilise l’injection de dépendances pour instancier le service et l’injecter automatiquement dans le controller, à condition qu’il soit enregistré comme provider dans le module. [docs.nestjs](https://docs.nestjs.com/providers)
+
+## Intérêt
+
+Le controller ne calcule rien lui-même, il délègue :
+
+- `getOverview()` → `reportsService.getOverview()`
+- `getMatrix()` → `reportsService.getMatrix()`
+- `getContainerDetails()` → `reportsService.getContainerDetails(containerId)`
+
+C’est une très bonne séparation des responsabilités.
+
+***
+
+# Méthode `getOverview`
+
+```ts
+@Get("overview")
+getOverview() {
+  return this.reportsService.getOverview();
+}
+```
+
+## Route
+
+- `GET /api/reports/overview`
+
+## Rôle
+
+- Exposer un endpoint de vue d’ensemble des rapports.
+
+## Comportement
+
+- Appelle directement `reportsService.getOverview()`
+- Retourne son résultat au client
+
+## Lecture métier probable
+
+Cette route sert probablement à fournir des données agrégées :
+- résumé global,
+- totaux,
+- métriques haut niveau,
+- état général des scans ou vulnérabilités.
+
+***
+
+# Méthode `getMatrix`
+
+```ts
+@Get("matrix")
+getMatrix() {
+  return this.reportsService.getMatrix();
+}
+```
+
+## Route
+
+- `GET /api/reports/matrix`
+
+## Rôle
+
+- Exposer un endpoint de matrice de reporting.
+
+## Comportement
+
+- Appelle `reportsService.getMatrix()`
+- Retourne le résultat brut
+
+## Lecture métier probable
+
+Le mot **matrix** suggère une représentation croisée de données, par exemple :
+- sévérité × conteneur,
+- image × vulnérabilités,
+- catégorie × état,
+- score × exposition.
+
+Le détail exact dépend du service.
+
+***
+
+# Méthode `getContainerDetails`
+
+```ts
+@Get("details/:containerId")
+getContainerDetails(@Param("containerId") containerId: string) {
+  return this.reportsService.getContainerDetails(containerId);
+}
+```
+
+## Route
+
+- `GET /api/reports/details/:containerId`
+
+### Exemple
+
+- `GET /api/reports/details/container-123`
+
+***
+
+## Paramètre `@Param("containerId")`
+
+### Rôle
+
+- Extraire la valeur du segment dynamique `:containerId` de l’URL.
+- La stocker dans la variable `containerId`.
+
+Nest documente `@Param('token')` comme la manière standard d’accéder à un paramètre de route précis. [docs.nestjs](https://docs.nestjs.com/controllers)
+
+***
+
+## Comportement
+
+- Reçoit l’ID de conteneur depuis l’URL
+- appelle :
+
+```ts
+this.reportsService.getContainerDetails(containerId)
+```
+
+- retourne le détail du conteneur demandé
+
+## Lecture métier probable
+
+Cette route sert probablement à consulter :
+- les métadonnées du conteneur,
+- ses vulnérabilités,
+- son image,
+- son état,
+- son historique ou ses détails de scan.
+
+***
+
+# Flux complet d’une requête
+
+Prenons `GET /api/reports/details/abc123`.
+
+## Étapes
+
+1. La requête arrive sur `ReportsController`. [docs.nestjs](https://docs.nestjs.com/controllers)
+2. `BasicAuthGuard` s’exécute :
+   - lit le token,
+   - valide la requête,
+   - injecte `req.user`. [docs.nestjs](https://docs.nestjs.com/guards)
+3. `RolesGuard` s’exécute :
+   - lit `@Roles(Role.ADMIN, Role.VIEWER)`,
+   - vérifie `req.user.role`. [oneuptime](https://oneuptime.com/blog/post/2026-02-02-nestjs-guards-authorization/view)
+4. Si l’utilisateur a le bon rôle :
+   - Nest appelle `getContainerDetails(...)`.  
+5. `@Param("containerId")` extrait `abc123`. [docs.nestjs](https://docs.nestjs.com/controllers)
+6. La méthode appelle `reportsService.getContainerDetails("abc123")`.  
+7. Le résultat est renvoyé en HTTP.
+
+***
+
+# Variables / éléments importants
+
+| Élément | Type logique | Rôle |
+|---|---|---|
+| `ReportsController` | controller Nest | expose les routes de reporting |
+| `@Controller("api/reports")` | décorateur | définit le préfixe de route |
+| `@UseGuards(...)` | décorateur | protège toutes les routes du controller |
+| `BasicAuthGuard` | guard | authentifie la requête |
+| `RolesGuard` | guard | vérifie les rôles autorisés |
+| `@Roles(Role.ADMIN, Role.VIEWER)` | décorateur custom | déclare les rôles autorisés |
+| `reportsService` | service injecté | contient la logique métier |
+| `@Get("overview")` | route GET | retourne la vue d’ensemble |
+| `@Get("matrix")` | route GET | retourne une matrice de reporting |
+| `@Get("details/:containerId")` | route GET paramétrée | retourne le détail d’un conteneur |
+| `@Param("containerId")` | décorateur de paramètre | extrait l’ID de conteneur de l’URL |
+
+***
+
+# Lecture architecturale
+
+## 1. Très bonne séparation des responsabilités
+
+Ce controller est proprement structuré :
+
+- le controller gère HTTP + sécurité déclarative,
+- les guards gèrent auth et autorisation,
+- le service gère la logique métier.
+
+C’est exactement l’architecture idiomatique NestJS. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+## 2. Sécurité appliquée au niveau classe
+
+Le choix d’appliquer `@UseGuards(...)` et `@Roles(...)` au niveau controller est bon ici, car toutes les routes du controller semblent partager les mêmes contraintes d’accès. Nest permet justement ce scope classe pour éviter de répéter les décorateurs sur chaque méthode. [github](https://github.com/nestjs/nest/blob/master/packages/common/decorators/core/use-guards.decorator.ts)
+
+## 3. Endpoint de lecture réservé aux humains
+
+Le fait d’autoriser `ADMIN` et `VIEWER`, mais pas `AGENT`, suggère que ce controller sert à la consultation/reporting côté utilisateur humain, pas à l’agent technique de scan. C’est cohérent avec le nom `ReportsController`.
+
+## 4. Controller fin, service épais
+
+Chaque méthode du controller délègue directement au service sans logique parasite. C’est généralement un très bon signe de design.
+
+***
+
+# Traduction simple pour débutant
+
+Tu peux voir ce controller comme :
+
+> “la porte d’entrée HTTP pour lire les rapports”.
+
+Il dit :
+- toutes les routes commencent par `/api/reports`,
+- il faut être authentifié,
+- il faut être `ADMIN` ou `VIEWER`,
+- puis on peut :
+  - voir la vue d’ensemble,
+  - voir une matrice,
+  - voir le détail d’un conteneur.
+
+***
+
+# Conclusion technique
+
+`reports.controller.ts` définit un **controller NestJS de reporting** sous le préfixe `/api/reports`, protégé au niveau classe par `BasicAuthGuard` et `RolesGuard`, avec une restriction de rôles `ADMIN` ou `VIEWER`. Il expose trois handlers GET qui délèguent entièrement la logique métier à `ReportsService`, avec usage standard de `@Controller()`, `@Get()`, `@UseGuards()`, `@Roles()` et `@Param()`. [docs.nestjs](https://docs.nestjs.com/security/authorization)
+
+***
+`scan.module.ts` définit un **feature module NestJS** pour la partie scans, en regroupant un controller (`ScansController`) et un service (`ScansService`), puis en exportant ce service pour qu’il soit injectable ailleurs. Dans Nest, un module organise les controllers et providers d’un domaine fonctionnel, et les providers ne sont visibles hors du module que s’ils sont explicitement exportés. [docs.nestjs](https://docs.nestjs.com/modules)
+
+## Le code
+
+```ts
+import { Module } from "@nestjs/common";
+import { ScansController } from "./scans.controller";
+import { ScansService } from "./scans.service";
+
+@Module({
+  controllers: [ScansController],
+  providers: [ScansService],
+  exports: [ScansService]
+})
+export class ScansModule {}
+```
+
+## Imports
+
+`Module` est le décorateur NestJS utilisé pour déclarer un module et lui fournir sa configuration structurelle. `ScansController` représente la couche HTTP du domaine scans, tandis que `ScansService` représente la couche provider/service contenant la logique métier associée. [docs.nestjs](https://docs.nestjs.com/providers)
+
+## `@Module(...)`
+
+Le décorateur `@Module({...})` prend ici trois champs : `controllers`, `providers` et `exports`, qui sont trois éléments centraux de la composition d’un module Nest. La documentation Nest décrit `controllers` comme les handlers HTTP du module, `providers` comme les services injectables instanciés par le conteneur Nest, et `exports` comme le sous-ensemble de providers rendu disponible aux autres modules qui importent ce module. [docs.nest-js](https://docs.nest-js.fr/modules)
+
+## `controllers: [ScansController]`
+
+Cette ligne enregistre `ScansController` dans le module, ce qui signifie que Nest va l’instancier et l’utiliser pour traiter les requêtes HTTP liées au domaine scans. Un controller est précisément responsable de recevoir les requêtes entrantes et de renvoyer les réponses, généralement en délégant la logique métier à un service. [docs.nestjs](https://docs.nestjs.com/controllers)
+
+## `providers: [ScansService]`
+
+Cette ligne déclare `ScansService` comme provider du module, donc Nest pourra l’injecter dans `ScansController` ou dans d’autres providers du même module. Les services Nest sont des providers classiques, et leur rôle est généralement de concentrer la logique métier ou l’accès aux données. [docs.nestjs](https://docs.nestjs.com/modules)
+
+## `exports: [ScansService]`
+
+Cette ligne expose `ScansService` à l’extérieur du module, afin qu’un autre module qui importe `ScansModule` puisse injecter ce service sans le redéclarer. Sans cet export, `ScansService` resterait encapsulé à l’intérieur de `ScansModule` et ne pourrait pas être injecté directement depuis d’autres modules. [stackoverflow](https://stackoverflow.com/questions/51819504/inject-nestjs-service-from-another-module)
+
+## `ScansModule`
+
+La classe `ScansModule` elle-même est vide, ce qui est normal pour un module Nest simple, car la vraie configuration se trouve dans le décorateur `@Module`. C’est donc un module de fonctionnalité classique, comparable aux exemples officiels où un controller et un service sont regroupés dans un même domaine métier. [mindbowser](https://www.mindbowser.com/understanding-nestjs-architecture/)
+
+## Lecture architecturale
+
+Ce module suit le pattern NestJS standard :  
+- `ScansController` = couche HTTP,  
+- `ScansService` = logique métier,  
+- `ScansModule` = frontière du domaine scans. [docs.nestjs](https://docs.nestjs.com/providers)
+
+Le fait d’exporter `ScansService` suggère qu’un autre module du projet a probablement besoin de consommer la logique scans, par exemple un module de reports, de tasks, ou d’orchestration. C’est justement l’usage normal de `exports` dans Nest : partager un provider sans en recréer une nouvelle instance ailleurs. [reddit](https://www.reddit.com/r/nestjs/comments/1cx8p98/clarification_on_exporting_services_in_nestjs_am/)
+
+## Traduction simple
+
+Tu peux voir ce fichier comme :
+
+- “je crée un module `Scans`”,
+- “ce module possède un controller pour les routes scans”,
+- “et un service pour la logique scans”,
+- “et j’autorise les autres modules à réutiliser ce service”.
+
+## Conclusion technique
+
+`scan.module.ts` est un **module NestJS de fonctionnalité** qui enregistre `ScansController` comme controller HTTP, `ScansService` comme provider métier, puis exporte `ScansService` pour le rendre disponible aux autres modules qui importent `ScansModule`. C’est un pattern standard et propre de structuration modulaire dans NestJS. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+***
+Voici le breakdown de `scan.services.ts` — en pratique `ScansService` — qui est le **service métier d’écriture** des scans en base PostgreSQL. Les services NestJS sont des providers injectables, et ici l’écriture est encapsulée dans une transaction `node-postgres`, ce qui est la bonne manière de garantir l’atomicité de plusieurs `INSERT` liés. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+## Le code
+
+```ts
+import { Injectable } from "@nestjs/common";
+import { randomUUID } from "crypto";
+import { DatabaseService } from "../../database/database.service";
+import { CreateScanDto } from "./dto/create-scan.dto";
+
+function severityFromCvss(cvss: number): "critical" | "high" | "medium" | "low" {
+  if (cvss >= 9) return "critical";
+  if (cvss >= 7) return "high";
+  if (cvss >= 4) return "medium";
+  return "low";
+}
+
+@Injectable()
+export class ScansService {
+  constructor(private readonly db: DatabaseService) {}
+
+  async createScan(payload: CreateScanDto): Promise<{ scanId: string }> {
+    const scanId = randomUUID();
+    const scanTimestamp = payload.timestamp;
+
+    await this.db.transaction(async (client) => {
+      await client.query(
+        `INSERT INTO scans (
+          id,
+          agent_id,
+          scan_type,
+          started_at,
+          finished_at,
+          summary_total_containers,
+          summary_healthy_containers,
+          summary_vulnerable_containers,
+          summary_total_vulnerabilities,
+          summary_global_risk_score
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          scanId,
+          payload.agent_id,
+          payload.scan_type,
+          scanTimestamp,
+          scanTimestamp,
+          payload.summary.total_containers,
+          payload.summary.healthy_containers,
+          payload.summary.vulnerable_containers,
+          payload.summary.total_vulnerabilities,
+          payload.summary.global_risk_score
+        ]
+      );
+
+      for (const container of payload.containers) {
+        const containerInsert = await client.query<{ id: string }>(
+          `INSERT INTO scan_containers (scan_id, container_id, name, image, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING id`,
+          [scanId, container.id, container.name, container.image, container.status, container.created_at ?? null]
+        );
+
+        const containerRowId = containerInsert.rows[0].id;
+
+        for (const vuln of container.vulnerabilities) {
+          await client.query(
+            `INSERT INTO vulnerabilities
+              (container_row_id, cve, cwe, package_name, installed_version, fixed_version, cvss, severity, title, remediation, description, source)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            [
+              containerRowId,
+              vuln.cve,
+              vuln.cwe ? JSON.stringify(vuln.cwe) : null,
+              vuln.package_name,
+              vuln.installedVersion ?? null,
+              vuln.fixedVersion ?? null,
+              vuln.cvss,
+              severityFromCvss(vuln.cvss),
+              vuln.title ?? null,
+              vuln.remediation ?? null,
+              vuln.description ?? null,
+              vuln.source ?? null
+            ]
+          );
+        }
+      }
+
+      return { scanId };
+    });
+
+    return { scanId };
+  }
+}
+```
+
+## Imports
+
+`Injectable` marque la classe comme provider géré par le conteneur DI de NestJS, ce qui permet l’injection par constructeur. `DatabaseService` est ici une dépendance injectée, et Nest recommande justement ce modèle de constructor injection pour relier services et providers. [docs.nestjs](https://docs.nestjs.com/providers)
+
+`randomUUID` sert à générer un UUID v4 aléatoire pour identifier le scan avant insertion. `crypto.randomUUID()` est bien une API standard côté Node pour produire un UUID v4. [geeksforgeeks](https://www.geeksforgeeks.org/node-js/node-js-crypto-randomuuid-function/)
+
+`CreateScanDto` représente le contrat d’entrée de la méthode `createScan`, donc la forme attendue du payload reçu côté application. En Nest, les DTO servent précisément à structurer les données entrantes dans une couche claire entre HTTP et logique métier. [docs.nestjs](https://docs.nestjs.com)
+
+## Fonction `severityFromCvss`
+
+Cette fonction transforme un score CVSS numérique en niveau de sévérité textuel parmi `critical`, `high`, `medium` et `low`. La logique est simple : `>= 9` devient `critical`, `>= 7` devient `high`, `>= 4` devient `medium`, sinon `low`. [docs.nestjs](https://docs.nestjs.com)
+
+## Rôle métier
+
+Elle normalise les scores avant insertion en base, pour stocker à la fois :
+- la valeur numérique `cvss`,
+- une catégorie lisible `severity`.
+
+## Lecture du mapping
+
+Le mapping est purement applicatif ici, défini en dur dans le service, ce qui veut dire que l’application ne dépend pas d’une source externe pour classer les vulnérabilités. Cela rend le comportement prévisible et stable.
+
+## Décorateur `@Injectable()`
+
+Le décorateur `@Injectable()` indique à Nest que `ScansService` peut être instancié et injecté par le conteneur IoC. C’est le mécanisme standard pour déclarer un service Nest comme provider réutilisable. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+## Classe `ScansService`
+
+`ScansService` contient la logique métier de création d’un scan complet en base, avec ses conteneurs et ses vulnérabilités associées. Le controller appellera probablement cette méthode pour persister un rapport de scan reçu d’un agent.
+
+## Constructeur
+
+```ts
+constructor(private readonly db: DatabaseService) {}
+```
+
+Cette ligne injecte `DatabaseService` dans le service via le constructeur. En NestJS, ce pattern est le mécanisme normal d’injection de dépendances entre providers. [dev](https://dev.to/medianova/the-ultimate-guide-to-dependency-injection-in-nestjs-3l22)
+
+### Rôle de `db`
+
+`db` est l’abstraction locale d’accès à PostgreSQL :
+- `db.transaction(...)` fournit un client transactionnel,
+- le service n’instancie pas lui-même `Pool` ni `Client`,
+- la logique SQL reste couplée à une couche de base maîtrisée.
+
+## Méthode `createScan`
+
+```ts
+async createScan(payload: CreateScanDto): Promise<{ scanId: string }>
+```
+
+### Signature
+
+La méthode :
+- reçoit `payload`, typé par `CreateScanDto`,
+- renvoie un objet `{ scanId: string }`.
+
+### Rôle global
+
+Elle persiste un scan complet dans trois niveaux relationnels :
+1. la ligne principale dans `scans`,
+2. les lignes de conteneurs dans `scan_containers`,
+3. les lignes de vulnérabilités dans `vulnerabilities`.
+
+## Variables locales
+
+```ts
+const scanId = randomUUID();
+const scanTimestamp = payload.timestamp;
+```
+
+`scanId` est l’identifiant unique du scan généré côté application avant insertion. `scanTimestamp` récupère le timestamp du payload, qui sera réutilisé comme `started_at` et `finished_at`. [developer.mozilla](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID)
+
+### Pourquoi générer l’ID côté application
+
+Générer l’UUID avant l’insertion permet de le réutiliser immédiatement dans les inserts liés, notamment pour les clés étrangères comme `scan_id`. C’est très pratique dans les écritures relationnelles multi-table.
+
+## Transaction
+
+```ts
+await this.db.transaction(async (client) => {
+```
+
+Cette partie enveloppe toute l’écriture dans une transaction unique. Avec `node-postgres`, il faut exécuter `BEGIN`, `COMMIT` et `ROLLBACK` sur **le même client**, et non via `pool.query`, pour que la transaction soit correcte. [node-postgres](https://node-postgres.com/features/transactions)
+
+### Pourquoi c’est important
+
+Si un insert de vulnérabilité échoue après l’insertion du scan principal, toute la transaction peut être rollback, ce qui évite une base incohérente avec un scan partiellement enregistré. [gist.github](https://gist.github.com/brianc/5547726)
+
+## Insertion dans `scans`
+
+Le premier `INSERT` crée la ligne principale du scan dans la table `scans`. Les valeurs proviennent du payload : agent, type, timestamp et résumé agrégé. [node-postgres](https://node-postgres.com/features/transactions)
+
+### Colonnes écrites
+
+- `id`
+- `agent_id`
+- `scan_type`
+- `started_at`
+- `finished_at`
+- `summary_total_containers`
+- `summary_healthy_containers`
+- `summary_vulnerable_containers`
+- `summary_total_vulnerabilities`
+- `summary_global_risk_score`
+
+### Détail notable
+
+`started_at` et `finished_at` reçoivent tous les deux `scanTimestamp`, donc ce service traite ce rapport comme un snapshot déjà fini plutôt que comme un scan en cours de suivi.
+
+## Boucle sur les conteneurs
+
+```ts
+for (const container of payload.containers) {
+```
+
+Après insertion du scan principal, le service parcourt tous les conteneurs du payload pour les rattacher à ce scan.
+
+## Insertion dans `scan_containers`
+
+Le code insère chaque conteneur dans `scan_containers` avec :
+- `scan_id` qui référence le scan parent,
+- `container_id`,
+- `name`,
+- `image`,
+- `status`,
+- `created_at`.
+
+Puis il utilise `RETURNING id` pour récupérer l’identifiant technique de la ligne insérée. PostgreSQL supporte `RETURNING` pour récupérer immédiatement les colonnes générées ou retournées après un `INSERT`. [github](https://github.com/brianc/node-postgres/issues/1269)
+
+### `containerInsert`
+
+```ts
+const containerInsert = await client.query<{ id: string }>(...)
+```
+
+Le résultat contient les lignes retournées par PostgreSQL, ici la colonne `id`.
+
+### `containerRowId`
+
+```ts
+const containerRowId = containerInsert.rows[0].id;
+```
+
+Cette valeur devient la clé étrangère utilisée pour relier les vulnérabilités à la ligne `scan_containers`.
+
+### Point de typage
+
+La table `scan_containers.id` est un `BIGSERIAL` dans ton schéma précédent, donc côté PostgreSQL c’est un entier auto-incrémenté. Le code le type ici comme `{ id: string }`, ce qui peut être cohérent en pratique avec `pg`, car `node-postgres` retourne certains types numériques PostgreSQL comme chaînes pour éviter des pertes de précision selon le type concerné et la configuration du parser. [node-postgres](https://node-postgres.com/features/transactions)
+
+## Boucle sur les vulnérabilités
+
+```ts
+for (const vuln of container.vulnerabilities) {
+```
+
+Pour chaque conteneur, le service parcourt la liste des vulnérabilités détectées et les insère une par une dans la table `vulnerabilities`.
+
+## Insertion dans `vulnerabilities`
+
+Chaque vulnérabilité enregistre :
+- le lien vers le conteneur (`container_row_id`),
+- les identifiants de vulnérabilité (`cve`, `cwe`),
+- les informations package/version,
+- le score `cvss`,
+- la sévérité dérivée,
+- plusieurs champs de texte descriptifs.
+
+### Gestion de `cwe`
+
+```ts
+vuln.cwe ? JSON.stringify(vuln.cwe) : null
+```
+
+Le champ `cwe` est sérialisé en JSON texte si présent, sinon `null`. Comme dans ton schéma SQL la colonne `cwe` est de type `TEXT`, ce code stocke donc une représentation JSON sérialisée et non un vrai type `JSONB`.
+
+### Gestion des champs optionnels
+
+Le code utilise fréquemment `?? null` pour convertir les `undefined` éventuels vers `NULL` SQL :
+- `installedVersion ?? null`
+- `fixedVersion ?? null`
+- `title ?? null`
+- `remediation ?? null`
+- `description ?? null`
+- `source ?? null`
+
+C’est une bonne pratique quand on veut garder des inserts SQL explicites et cohérents.
+
+### Sévérité calculée
+
+```ts
+severityFromCvss(vuln.cvss)
+```
+
+Le niveau textuel n’est pas fourni par le payload mais recalculé par le service à partir du score numérique. Cela garantit une convention unique de catégorisation dans la base.
+
+## `return { scanId }` dans la transaction
+
+```ts
+return { scanId };
+```
+
+Cette valeur est renvoyée au callback transactionnel, mais elle n’est pas récupérée par le code appelant, car le résultat de `await this.db.transaction(...)` n’est pas stocké dans une variable. En l’état, ce `return` interne est donc redondant.
+
+## Retour final
+
+```ts
+return { scanId };
+```
+
+Après le succès de la transaction, la méthode renvoie l’ID du scan créé. C’est cohérent pour permettre au controller ou au client de référencer ensuite ce scan.
+
+## Flux complet
+
+Le flux métier complet est :
+1. générer un `scanId`,
+2. ouvrir une transaction,
+3. insérer la ligne `scans`,
+4. pour chaque conteneur, insérer `scan_containers` et récupérer son `id`,
+5. pour chaque vulnérabilité du conteneur, insérer dans `vulnerabilities`,
+6. commit implicite via `DatabaseService` si tout réussit,
+7. renvoyer `{ scanId }`. [node-postgres](https://node-postgres.com/features/transactions)
+
+## Lecture architecturale
+
+Ce service suit bien les principes NestJS :
+- service injectable,
+- dépendance DB injectée,
+- logique métier hors controller. [digitalocean](https://www.digitalocean.com/community/tutorials/a-guide-on-dependency-injection-in-nestjs)
+
+Il suit aussi une bonne logique relationnelle :
+- un scan parent,
+- plusieurs conteneurs enfants,
+- plusieurs vulnérabilités petites-filles,
+- le tout dans une seule transaction atomique. [node-postgres](https://node-postgres.com/features/transactions)
+
+## Points d’attention
+
+- Le fichier s’appelle `scan.services.ts`, mais la convention Nest habituelle serait plutôt `scans.service.ts`.
+- `containerInsert` est typé avec `{ id: string }` alors que la colonne vient d’un `BIGSERIAL`, donc il faut être sûr que le reste du code accepte ce type sans ambiguïté.
+- Le champ `cwe` est stocké comme texte JSON sérialisé, ce qui fonctionne mais est moins exploitable qu’un vrai `JSONB`.
+- Le `return { scanId }` à l’intérieur du callback transactionnel est inutile tant que son résultat n’est pas capturé.
+
+## Traduction simple
+
+Ce service fait exactement ça :
+- il crée un nouvel identifiant de scan,
+- il enregistre le scan principal,
+- il enregistre tous les conteneurs du scan,
+- il enregistre toutes les vulnérabilités de chaque conteneur,
+- et il fait tout ça en une seule opération transactionnelle.
+
+## Conclusion technique
+
+`ScansService` est le **service NestJS de persistance des scans**. Il injecte `DatabaseService`, génère un UUID pour le scan, transforme le score CVSS en sévérité textuelle, puis insère le scan, ses conteneurs et leurs vulnérabilités dans PostgreSQL au sein d’une transaction unique, ce qui garantit la cohérence de l’écriture relationnelle. [geeksforgeeks](https://www.geeksforgeeks.org/node-js/node-js-crypto-randomuuid-function/)
+
+***
+Ce fichier définit deux **DTO NestJS** pour les scan tasks : un pour créer une tâche, l’autre pour la compléter, avec validation déclarative via `class-validator`. Dans Nest, les DTO sont généralement validés par `ValidationPipe`, et les décorateurs comme `@IsIn()`, `@IsArray()` et `@IsString()` servent précisément à contrôler les payloads entrants avant d’atteindre la logique métier. [docs.nestjs](https://docs.nestjs.com/techniques/validation)
+
+## Le code
+
+```ts
+import { IsArray, IsIn, IsOptional, IsString } from "class-validator";
+
+const TASK_MODES = ["MANUAL_GLOBAL", "MANUAL_TARGET", "AUTO_CRON"] as const;
+const TASK_STATUSES = ["queued", "processing", "completed", "failed"] as const;
+
+export class CreateScanTaskDto {
+  @IsIn(TASK_MODES)
+  mode!: (typeof TASK_MODES)[number];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  container_ids?: string[];
+
+  @IsOptional()
+  @IsString()
+  message?: string;
+}
+
+export class CompleteScanTaskDto {
+  @IsOptional()
+  @IsString()
+  scan_id?: string;
+
+  @IsIn(TASK_STATUSES)
+  status!: (typeof TASK_STATUSES)[number];
+
+  @IsOptional()
+  @IsString()
+  message?: string;
+}
+```
+
+## Imports
+
+`IsArray`, `IsIn`, `IsOptional` et `IsString` viennent de `class-validator`, la bibliothèque que Nest utilise couramment avec `ValidationPipe` pour valider les DTO. `ValidationPipe` applique les règles déclarées sur la classe DTO aux données reçues dans les requêtes entrantes. [github](https://github.com/typestack/class-validator)
+
+## Constantes `TASK_MODES` et `TASK_STATUSES`
+
+```ts
+const TASK_MODES = ["MANUAL_GLOBAL", "MANUAL_TARGET", "AUTO_CRON"] as const;
+const TASK_STATUSES = ["queued", "processing", "completed", "failed"] as const;
+```
+
+Ces deux constantes centralisent les valeurs autorisées pour les modes et les statuts des tâches. Le `as const` dit à TypeScript de conserver les valeurs littérales exactes au lieu de les élargir vers `string[]`, ce qui permet ensuite de dériver des unions de types précises à partir du tableau. [docs.nestjs](https://docs.nestjs.com)
+
+## Pourquoi c’est utile
+
+Cela évite de dupliquer :
+- une liste de validation runtime,
+- et une union de types TypeScript séparée.
+
+Ici, les mêmes constantes servent à la fois :
+- pour `@IsIn(...)` côté validation,
+- pour typer les propriétés côté compilation.
+
+## `CreateScanTaskDto`
+
+Cette classe décrit le payload attendu pour créer une tâche de scan. En Nest, une classe DTO sert de contrat d’entrée entre la couche HTTP et la logique métier. [devcentrehouse](https://www.devcentrehouse.eu/blogs/nestjs-dtos-pipes-scalable-backend-apps/)
+
+### Champ `mode`
+
+```ts
+@IsIn(TASK_MODES)
+mode!: (typeof TASK_MODES)[number];
+```
+
+`@IsIn(TASK_MODES)` exige que la valeur reçue soit exactement l’une des trois valeurs de `TASK_MODES`. Le type `(typeof TASK_MODES)[number]` signifie “une des valeurs contenues dans ce tuple”, donc ici `"MANUAL_GLOBAL" | "MANUAL_TARGET" | "AUTO_CRON"`.  [github](https://github.com/typestack/class-validator)
+
+#### Rôle métier
+
+Ce champ indique le type de tâche à lancer :
+- globale,
+- ciblée,
+- ou automatique via cron.
+
+#### Le `!`
+
+Le `!` est l’assertion definite assignment de TypeScript, souvent utilisée dans les DTO Nest parce que les propriétés sont remplies dynamiquement à l’exécution par le framework. [docs.nestjs](https://docs.nestjs.com/techniques/validation)
+
+### Champ `container_ids`
+
+```ts
+@IsOptional()
+@IsArray()
+@IsString({ each: true })
+container_ids?: string[];
+```
+
+Ce champ est optionnel, mais s’il est présent :
+- il doit être un tableau,
+- et chaque élément du tableau doit être une chaîne de caractères. `@IsString({ each: true })` applique la validation à chaque élément du tableau, et ce pattern est explicitement documenté et recommandé pour les tableaux d’éléments primitifs. [stackoverflow](https://stackoverflow.com/questions/69438275/nest-js-validate-array-of-strings-if-there-are-defined-strings-only)
+
+#### Interprétation métier
+
+Ce champ sert probablement pour le mode `MANUAL_TARGET`, où l’on veut préciser une liste de conteneurs à scanner.
+
+#### Point important
+
+Le couple `@IsArray()` + `@IsString({ each: true })` est le bon pattern ici, car `each: true` seul n’impose pas forcément qu’on ait vraiment un tableau dans tous les cas. [github](https://github.com/typestack/class-validator/issues/1858)
+
+### Champ `message`
+
+```ts
+@IsOptional()
+@IsString()
+message?: string;
+```
+
+Ce champ est optionnel et, s’il est fourni, doit être une chaîne de caractères. Il sert probablement à ajouter un commentaire ou un contexte humain à la demande de tâche.
+
+## `CompleteScanTaskDto`
+
+Cette classe décrit le payload attendu pour finaliser une tâche de scan. Elle contient le statut final, éventuellement l’ID du scan produit, et un message optionnel.
+
+### Champ `scan_id`
+
+```ts
+@IsOptional()
+@IsString()
+scan_id?: string;
+```
+
+Ce champ est optionnel et doit être une chaîne si présent. Il permet probablement d’associer la tâche terminée à un scan réel créé dans la table `scans`.
+
+### Champ `status`
+
+```ts
+@IsIn(TASK_STATUSES)
+status!: (typeof TASK_STATUSES)[number];
+```
+
+Ce champ est obligatoire et doit valoir exactement :
+- `"queued"`
+- `"processing"`
+- `"completed"`
+- `"failed"`.
+
+Le type associé devient donc l’union littérale de ces quatre valeurs. `@IsIn(...)` vérifie au runtime que la valeur reçue fait partie de cette liste autorisée. [github](https://github.com/typestack/class-validator)
+
+#### Lecture métier
+
+Dans un DTO de complétion, les valeurs les plus réalistes seront probablement surtout :
+- `completed`
+- `failed`.
+
+Mais le DTO autorise aussi `queued` et `processing`, donc il semble conçu pour être souple et couvrir plusieurs transitions possibles.
+
+### Champ `message`
+
+```ts
+@IsOptional()
+@IsString()
+message?: string;
+```
+
+Même logique que dans `CreateScanTaskDto` : texte libre optionnel, probablement pour un message de succès, d’erreur, ou de contexte.
+
+## Lecture architecturale
+
+Ces DTO montrent une validation **déclarative, compacte et propre** :
+- les règles métier simples sont visibles directement dans la classe,
+- TypeScript garantit les unions de types à la compilation,
+- `class-validator` garantit les valeurs à l’exécution. [devcentrehouse](https://www.devcentrehouse.eu/blogs/nestjs-dtos-pipes-scalable-backend-apps/)
+
+Le design est aussi cohérent avec le modèle SQL que tu as montré plus tôt pour `scan_tasks`, où `mode` et `status` sont eux aussi limités par des `CHECK` en base. Autrement dit, la validation existe à deux niveaux :
+- côté API avec DTO,
+- côté base avec contraintes SQL.
+
+## Points d’attention
+
+Le DTO valide que `scan_id` est une chaîne, mais pas qu’il s’agit d’un UUID valide. Si tu veux renforcer le contrat, `@IsUUID()` serait plus précis que `@IsString()`. `class-validator` fournit justement des validateurs spécialisés de ce type. [oneuptime](https://oneuptime.com/blog/post/2026-02-02-nestjs-class-validator/view)
+
+Même chose pour `container_ids` : aujourd’hui on valide “tableau de strings”, pas “tableau d’UUIDs” ou “tableau d’identifiants non vides”. Si les IDs ont un format strict, la validation peut être durcie.
+
+Le DTO `CompleteScanTaskDto` autorise `queued` et `processing`, ce qui n’est pas forcément intuitif pour une action de “complete”. Ce n’est pas faux, mais le nom de la classe suggère surtout une transition terminale.
+
+## Traduction simple
+
+Ce fichier dit au backend :
+
+- pour **créer** une tâche, il faut un `mode` valide, et éventuellement une liste de conteneurs et un message ;
+- pour **terminer** une tâche, il faut un `status` valide, et éventuellement un `scan_id` et un message.
+
+Et Nest peut vérifier ça automatiquement avant d’exécuter ton controller grâce au `ValidationPipe`. [docs.nestjs](https://docs.nestjs.com/techniques/validation)
+
+## Conclusion technique
+
+Ce fichier définit deux **DTO de scan tasks** avec validation déclarative via `class-validator`. `CreateScanTaskDto` contrôle le mode, une liste optionnelle de `container_ids` et un message, tandis que `CompleteScanTaskDto` contrôle un `status` obligatoire, plus `scan_id` et `message` optionnels, avec typage littéral dérivé des constantes `TASK_MODES` et `TASK_STATUSES`. [oneuptime](https://oneuptime.com/blog/post/2026-02-02-nestjs-class-validator/view)
+
+***
+Ce service NestJS lance et planifie une **mise à jour périodique des métadonnées NVD** au démarrage de l’application, puis toutes les 6 heures via `node-cron`. `OnModuleInit` et `OnModuleDestroy` sont bien des hooks lifecycle NestJS, et l’expression cron `0 */6 * * *` correspond à une exécution à minute 0 toutes les 6 heures. [docs.nestjs](https://docs.nestjs.com/fundamentals/lifecycle-events)
+
+## Vue d’ensemble
+
+`CveUpdaterService` ne télécharge pas ici la base complète des CVE : il récupère seulement le fichier `.meta` du feed NVD “modified”, extrait un petit résumé texte, puis journalise le résultat en base dans `cve_updates`. Le site NVD indique que les fichiers `.meta` accompagnent les feeds et contiennent notamment la date de dernière modification, la taille et un SHA256, et que le feed “modified” couvre les vulnérabilités modifiées sur les 8 derniers jours avec des mises à jour environ toutes les 2 heures. [nvd.nist](https://nvd.nist.gov/vuln/data-feeds)
+
+## Le code
+
+```ts
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import cron, { ScheduledTask } from "node-cron";
+import { DatabaseService } from "../../database/database.service";
+
+const NVD_META_URL = "https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-modified.meta";
+
+@Injectable()
+export class CveUpdaterService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(CveUpdaterService.name);
+  private task?: ScheduledTask;
+
+  constructor(private readonly db: DatabaseService) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.runUpdate();
+
+    this.task = cron.schedule("0 */6 * * *", async () => {
+      await this.runUpdate();
+    });
+  }
+
+  onModuleDestroy(): void {
+    if (this.task) {
+      this.task.stop();
+    }
+  }
+
+  private async runUpdate(): Promise<void> {
+    try {
+      const response = await fetch(NVD_META_URL);
+      if (!response.ok) {
+        throw new Error(`NVD response status ${response.status}`);
+      }
+
+      const meta = await response.text();
+      const summary = meta.split("\\n").slice(0, 2).join(" | ");
+
+      await this.db.query(
+        `INSERT INTO cve_updates (source, status, message) VALUES ($1, $2, $3)`,
+        ["nvd", "success", summary]
+      );
+
+      this.logger.log("CVE feed metadata refreshed");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown error";
+
+      await this.db.query(
+        `INSERT INTO cve_updates (source, status, message) VALUES ($1, $2, $3)`,
+        ["nvd", "failure", message]
+      );
+
+      this.logger.error(`CVE update failed: ${message}`);
+    }
+  }
+}
+```
+
+## Imports et constantes
+
+`Injectable`, `Logger`, `OnModuleInit` et `OnModuleDestroy` viennent de NestJS et servent respectivement à déclarer un provider injectable, journaliser, exécuter du code à l’initialisation et faire du nettoyage à l’arrêt. La doc Nest précise bien que `onModuleInit()` est appelé une fois les dépendances résolues, et `onModuleDestroy()` lors de la destruction déclenchée par un signal d’arrêt si les hooks de shutdown sont activés. [nestjs](https://nestjs.fr/fundamentals/lifecycle-events/)
+
+`cron` et `ScheduledTask` viennent de `node-cron`, utilisé ici pour planifier l’exécution récurrente. `DatabaseService` sert à persister l’état de mise à jour dans PostgreSQL. [blog.logrocket](https://blog.logrocket.com/task-scheduling-or-cron-jobs-in-node-using-node-cron/)
+
+`NVD_META_URL` pointe vers le fichier `.meta` du feed “modified” en version JSON 2.0. Le NVD documente bien cette convention de nommage `nvdcve-2.0-modified.meta`. [nvd.nist](https://nvd.nist.gov/vuln/data-feeds)
+
+## Classe `CveUpdaterService`
+
+La classe est un provider NestJS injectable qui vit dans le cycle de vie du module. Son rôle est d’automatiser une petite routine de synchronisation/monitoring liée au NVD. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+### `logger`
+
+```ts
+private readonly logger = new Logger(CveUpdaterService.name);
+```
+
+Ce logger Nest permet d’émettre des messages contextualisés avec le nom du service. Il est utilisé pour les cas de succès et d’échec.
+
+### `task?: ScheduledTask`
+
+```ts
+private task?: ScheduledTask;
+```
+
+Cette propriété stocke la tâche cron planifiée, afin de pouvoir l’arrêter proprement dans `onModuleDestroy()`. `node-cron` renvoie bien un objet représentant la tâche planifiée, sur lequel on peut appeler `stop()`. [oneuptime](https://oneuptime.com/blog/post/2026-01-22-nodejs-cron-jobs/view)
+
+## Constructeur
+
+```ts
+constructor(private readonly db: DatabaseService) {}
+```
+
+Le service dépend de `DatabaseService`, injecté par Nest via constructor injection. Cela suit le pattern standard de provider NestJS consommant un autre provider pour accéder à la base. [docs.nestjs](https://docs.nestjs.com/providers)
+
+## `onModuleInit()`
+
+```ts
+async onModuleInit(): Promise<void> {
+  await this.runUpdate();
+
+  this.task = cron.schedule("0 */6 * * *", async () => {
+    await this.runUpdate();
+  });
+}
+```
+
+Cette méthode est appelée au démarrage du module. Elle fait deux choses :
+1. exécute immédiatement une mise à jour,
+2. programme ensuite les mises à jour périodiques.
+
+### Exécution immédiate
+
+Le `await this.runUpdate()` au démarrage garantit qu’une première tentative de récupération NVD a lieu dès que le module est prêt. C’est utile pour ne pas attendre la prochaine fenêtre cron avant d’avoir un état initial.
+
+### Planification cron
+
+L’expression `"0 */6 * * *"` signifie “à la minute 0, toutes les 6 heures”, donc typiquement à 00:00, 06:00, 12:00 et 18:00. Cette interprétation est cohérente avec le format cron standard de `node-cron`, et le piège inverse documenté est justement `* */6 * * *`, qui tournerait chaque minute pendant ces heures. [stackoverflow](https://stackoverflow.com/questions/49416455/nodejs-script-execute-every-6-hours)
+
+### Lecture métier
+
+Comme le NVD annonce des mises à jour du feed “modified” environ toutes les deux heures, une fréquence de 6 heures est plus espacée que la fréquence source, donc on est ici sur une stratégie de rafraîchissement modérée et non maximale. [nvd.nist](https://nvd.nist.gov/vuln/data-feeds)
+
+## `onModuleDestroy()`
+
+```ts
+onModuleDestroy(): void {
+  if (this.task) {
+    this.task.stop();
+  }
+}
+```
+
+Cette méthode est appelée lors de la destruction du module. Si une tâche cron existe, elle est stoppée proprement via `stop()`. Nest documente `onModuleDestroy()` comme le bon hook pour ce type de nettoyage. [docs.nest-js](https://docs.nest-js.fr/fundamentals/lifecycle-events)
+
+### Intérêt
+
+Cela évite de laisser tourner une tâche planifiée dans un contexte de shutdown contrôlé, ce qui est particulièrement important dans des environnements comme Kubernetes ou lors de redéploiements. [stackoverflow](https://stackoverflow.com/questions/51707348/nestjs-request-and-application-lifecycle)
+
+## `runUpdate()`
+
+```ts
+private async runUpdate(): Promise<void> {
+```
+
+C’est le cœur métier du service. Cette méthode :
+- interroge le NVD,
+- construit un résumé,
+- persiste un succès ou un échec en base,
+- loggue le résultat.
+
+## Étape 1 : `fetch(NVD_META_URL)`
+
+```ts
+const response = await fetch(NVD_META_URL);
+if (!response.ok) {
+  throw new Error(`NVD response status ${response.status}`);
+}
+```
+
+Le service récupère le fichier `.meta` via HTTP. Si la réponse n’est pas dans la plage OK, il force une erreur explicite. Le check `response.ok` est un pattern standard de contrôle des réponses HTTP fetch.
+
+### Intérêt
+
+Cela évite de considérer comme “succès” une réponse HTTP 404, 500 ou similaire.
+
+## Étape 2 : lecture du texte
+
+```ts
+const meta = await response.text();
+const summary = meta.split("\n").slice(0, 2).join(" | ");
+```
+
+Le contenu `.meta` est lu comme texte brut. Ensuite, le service ne garde que les deux premières lignes, qu’il assemble avec `" | "` pour produire un résumé court.
+
+### Ce que ça veut dire
+
+Le service ne parse pas complètement le format `.meta`. Il s’appuie juste sur le fait que les premières lignes sont suffisamment utiles pour un journal succinct.
+
+### Limite
+
+C’est un résumé opportuniste, pas un parsing sémantique robuste. Si le format des premières lignes change, le message stocké changera aussi.
+
+## Étape 3 : journalisation du succès en base
+
+```ts
+await this.db.query(
+  `INSERT INTO cve_updates (source, status, message) VALUES ($1, $2, $3)`,
+  ["nvd", "success", summary]
+);
+```
+
+En cas de succès, une ligne est insérée dans `cve_updates` avec :
+- `source = "nvd"`,
+- `status = "success"`,
+- `message = summary`.
+
+### Lecture métier
+
+Cette table joue ici le rôle d’un journal d’exécution des mises à jour, pas celui d’un miroir complet des CVE.
+
+## Étape 4 : log applicatif
+
+```ts
+this.logger.log("CVE feed metadata refreshed");
+```
+
+Le service produit ensuite un log applicatif positif.
+
+## Gestion des erreurs
+
+Si une erreur survient, le `catch` convertit l’erreur en message texte :
+
+```ts
+const message = error instanceof Error ? error.message : "unknown error";
+```
+
+Puis il enregistre une ligne d’échec dans `cve_updates` :
+
+```ts
+await this.db.query(
+  `INSERT INTO cve_updates (source, status, message) VALUES ($1, $2, $3)`,
+  ["nvd", "failure", message]
+);
+```
+
+et loggue l’erreur côté application :
+
+```ts
+this.logger.error(`CVE update failed: ${message}`);
+```
+
+### Intérêt
+
+Le service conserve ainsi une trace en base des succès comme des échecs, ce qui est très utile pour l’observabilité et le diagnostic.
+
+## Flux complet
+
+Le flux complet du service est donc :
+1. démarrage du module,
+2. exécution immédiate de `runUpdate()`, [docs.nestjs](https://docs.nestjs.com/fundamentals/lifecycle-events)
+3. planification d’une exécution toutes les 6 heures, [stackoverflow](https://stackoverflow.com/questions/49416455/nodejs-script-execute-every-6-hours)
+4. à chaque run, requête HTTP sur le `.meta` NVD, [nvd.nist](https://nvd.nist.gov/vuln/data-feeds)
+5. insertion d’un statut `success` ou `failure` dans `cve_updates`,
+6. arrêt propre de la tâche cron à la destruction du module. [docs.nest-js](https://docs.nest-js.fr/fundamentals/lifecycle-events)
+
+## Lecture architecturale
+
+Le service est bien conçu pour un rôle de **background job léger** :
+- lifecycle hook Nest pour bootstrap et teardown, [docs.nestjs](https://docs.nestjs.com/fundamentals/lifecycle-events)
+- scheduler simple via `node-cron`, [blog.logrocket](https://blog.logrocket.com/task-scheduling-or-cron-jobs-in-node-using-node-cron/)
+- stockage en base du résultat pour audit/monitoring,
+- séparation claire entre logique HTTP externe, persistance et logs.
+
+Il ne s’agit cependant pas d’un vrai synchroniseur de CVE complet : il ne télécharge ni ne parse les vulnérabilités elles-mêmes, il ne met à jour aucune table CVE détaillée, et il ne consomme que les métadonnées du feed.
+
+## Points d’attention
+
+- `fetch` suppose un runtime Node récent ou un polyfill adapté.
+- La fréquence de 6 heures est plus lente que la cadence annoncée d’environ 2 heures du feed “modified”. [nvd.nist](https://nvd.nist.gov/vuln/data-feeds)
+- Le parsing des deux premières lignes est fragile si le format `.meta` évolue.
+- Si l’`INSERT` dans `cve_updates` échoue dans le bloc `catch`, cette erreur secondaire n’est pas elle-même protégée, donc elle remontera.
+
+## Traduction simple
+
+Ce service fait :
+- au démarrage, il va voir si le feed NVD “modified” a changé,
+- il note en base si ça a marché ou non,
+- puis il recommence automatiquement toutes les 6 heures.
+
+## Conclusion technique
+
+`CveUpdaterService` est un **service NestJS planifié** qui utilise les hooks `OnModuleInit` et `OnModuleDestroy` pour lancer et arrêter une tâche `node-cron`. À chaque exécution, il récupère le fichier `.meta` du feed NVD “modified”, en extrait un résumé minimal, enregistre en base un statut `success` ou `failure` dans `cve_updates`, puis journalise le résultat côté application. [stackoverflow](https://stackoverflow.com/questions/49416455/nodejs-script-execute-every-6-hours)
+
+***
+Ce fichier définit un **controller NestJS de gestion de file de tâches de scan** sous `/api/scan-tasks`, protégé par authentification et contrôle de rôle. Dans Nest, les guards décident si une requête peut atteindre le handler, et les décorateurs `@Body()`, `@Param()` et `@Req()` permettent d’injecter respectivement le corps, les paramètres d’URL et l’objet requête dans les méthodes du controller. [docs.nestjs](https://docs.nestjs.com/controllers)
+
+## Vue d’ensemble
+
+`ScanQueueController` expose quatre actions distinctes avec des permissions différentes :
+- création d’une tâche par un `ADMIN`,
+- listing des tâches par `ADMIN` ou `VIEWER`,
+- claim de la prochaine tâche par un `AGENT`,
+- complétion d’une tâche par un `AGENT`. Le contrôle d’accès par rôles via guards et décorateurs de metadata est un pattern RBAC standard dans NestJS. [docs.nestjs](https://docs.nestjs.com/guards)
+
+## Le code
+
+```ts
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Roles } from "../../common/decorators/roles.decorator";
+import { Role } from "../../common/enums/role.enum";
+import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
+import { RolesGuard } from "../../common/guards/roles.guard";
+import { RequestWithUser } from "../../common/types/request-with-user";
+import { CompleteScanTaskDto, CreateScanTaskDto } from "./dto/scan-task.dto";
+import { ScanQueueService } from "./scan-queue.service";
+
+@Controller("api/scan-tasks")
+@UseGuards(BasicAuthGuard, RolesGuard)
+export class ScanQueueController {
+  constructor(private readonly scanQueueService: ScanQueueService) {}
+
+  @Post()
+  @Roles(Role.ADMIN)
+  createTask(@Body() payload: CreateScanTaskDto, @Req() request: RequestWithUser) {
+    return this.scanQueueService.createTask(payload, request.user?.subject ?? "admin");
+  }
+
+  @Get()
+  @Roles(Role.ADMIN, Role.VIEWER)
+  listTasks() {
+    return this.scanQueueService.listTasks();
+  }
+
+  @Post("claim")
+  @Roles(Role.AGENT)
+  claimTask(@Req() request: RequestWithUser) {
+    return this.scanQueueService.claimNextTask(request.user?.subject ?? "agent");
+  }
+
+  @Post(":taskId/complete")
+  @Roles(Role.AGENT)
+  completeTask(
+    @Param("taskId") taskId: string,
+    @Body() payload: CompleteScanTaskDto,
+    @Req() request: RequestWithUser
+  ) {
+    return this.scanQueueService.completeTask(taskId, request.user?.subject ?? "agent", payload);
+  }
+}
+```
+
+## Imports principaux
+
+`Controller`, `Get`, `Post`, `Param`, `Body`, `Req` et `UseGuards` sont les décorateurs NestJS de base pour construire des routes HTTP. La documentation Nest décrit `@Body()` comme l’accès au corps de requête, `@Param()` comme l’accès aux paramètres de route, et `@Req()` comme l’accès à l’objet requête natif sous-jacent. [docs.nestjs](https://docs.nestjs.com/custom-decorators)
+
+`Roles`, `Role`, `BasicAuthGuard` et `RolesGuard` forment ici la couche de sécurité RBAC :
+- `BasicAuthGuard` authentifie,
+- `RolesGuard` autorise selon la metadata `@Roles(...)`. C’est exactement le pattern documenté par Nest pour l’autorisation basée sur les rôles. [docs.nestjs](https://docs.nestjs.com/security/authorization)
+
+`RequestWithUser` est un type applicatif permettant de typer `request.user`, ce qui suit une pratique courante quand un guard enrichit l’objet requête avec un utilisateur authentifié. [reddit](https://www.reddit.com/r/nestjs/comments/1j7v2ee/how_to_properly_type_the_request_object_in_a/)
+
+`CreateScanTaskDto` et `CompleteScanTaskDto` sont les DTO déjà vus, utilisés pour valider les corps de requête des endpoints de création et de complétion. [docs.nestjs](https://docs.nestjs.com/techniques/validation)
+
+## `@Controller("api/scan-tasks")`
+
+Ce décorateur fixe le préfixe commun de toutes les routes du controller à `/api/scan-tasks`. En NestJS, les controllers regroupent les handlers HTTP sous une même racine logique. [docs.nestjs](https://docs.nestjs.com/controllers)
+
+### Routes résultantes
+
+Avec ce préfixe, les méthodes deviennent :
+- `POST /api/scan-tasks`
+- `GET /api/scan-tasks`
+- `POST /api/scan-tasks/claim`
+- `POST /api/scan-tasks/:taskId/complete`
+
+## `@UseGuards(BasicAuthGuard, RolesGuard)`
+
+Ce décorateur est appliqué au niveau classe, donc il protège toutes les routes du controller. Nest documente que les guards peuvent être appliqués à l’échelle globale, controller ou méthode, et qu’ils s’exécutent avant que le handler ne soit appelé. [blog.logrocket](https://blog.logrocket.com/understanding-guards-nestjs/)
+
+### Ordre logique
+
+Ici l’ordre fait sens :
+1. `BasicAuthGuard` authentifie et enrichit probablement `request.user`,
+2. `RolesGuard` lit la metadata `@Roles(...)` et décide si le rôle courant est autorisé. [docs.nestjs](https://docs.nestjs.com/guards)
+
+## Classe `ScanQueueController`
+
+Cette classe représente la couche HTTP du domaine “scan tasks”. Elle ne contient pas la logique métier elle-même, mais délègue à `ScanQueueService`, ce qui correspond bien à la séparation controller/service encouragée par Nest. [docs.nestjs](https://docs.nestjs.com/providers)
+
+## Constructeur
+
+```ts
+constructor(private readonly scanQueueService: ScanQueueService) {}
+```
+
+Le service métier est injecté par constructeur. C’est le pattern standard d’injection de dépendances dans NestJS. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+## Méthode `createTask`
+
+```ts
+@Post()
+@Roles(Role.ADMIN)
+createTask(@Body() payload: CreateScanTaskDto, @Req() request: RequestWithUser) {
+  return this.scanQueueService.createTask(payload, request.user?.subject ?? "admin");
+}
+```
+
+Cette méthode gère `POST /api/scan-tasks` et n’est accessible qu’au rôle `ADMIN`. La metadata `@Roles(Role.ADMIN)` sera lue par `RolesGuard` pour autoriser ou refuser l’accès. [docs.nestjs](https://docs.nestjs.com/security/authorization)
+
+### Paramètres
+
+`@Body() payload: CreateScanTaskDto` injecte le corps HTTP validé comme DTO. `@Req() request: RequestWithUser` donne accès à l’utilisateur authentifié injecté dans la requête. [docs.nestjs](https://docs.nestjs.com/custom-decorators)
+
+### Comportement
+
+Le controller appelle `scanQueueService.createTask(payload, request.user?.subject ?? "admin")`. Il transmet donc :
+- les données métier de la tâche,
+- le sujet de l’utilisateur courant comme `requested_by`, ou `"admin"` en fallback implicite.
+
+### Lecture métier
+
+Cela suggère que le service va enregistrer qui a demandé la tâche de scan. Le fallback `"admin"` est une sécurité défensive, mais si le guard garantit toujours `request.user`, ce fallback ne devrait normalement jamais être utilisé.
+
+## Méthode `listTasks`
+
+```ts
+@Get()
+@Roles(Role.ADMIN, Role.VIEWER)
+listTasks() {
+  return this.scanQueueService.listTasks();
+}
+```
+
+Cette méthode gère `GET /api/scan-tasks` et autorise `ADMIN` et `VIEWER`. Elle n’a pas besoin du corps ni de la requête, car elle délègue simplement au service la récupération de la liste des tâches. [docs.nestjs](https://docs.nestjs.com/controllers)
+
+### Lecture métier
+
+On voit bien la séparation des rôles :
+- `ADMIN` peut créer et consulter,
+- `VIEWER` peut consulter,
+- `AGENT` n’est pas autorisé à lister selon ce controller.
+
+## Méthode `claimTask`
+
+```ts
+@Post("claim")
+@Roles(Role.AGENT)
+claimTask(@Req() request: RequestWithUser) {
+  return this.scanQueueService.claimNextTask(request.user?.subject ?? "agent");
+}
+```
+
+Cette méthode gère `POST /api/scan-tasks/claim` et n’est accessible qu’au rôle `AGENT`. Elle récupère l’identité de l’agent courant via `request.user?.subject` et la transmet au service. [docs.nestjs](https://docs.nestjs.com/guards)
+
+### Lecture métier
+
+C’est typiquement un endpoint de worker/agent :
+- un agent appelle l’API,
+- l’API lui attribue la prochaine tâche disponible,
+- l’identité de l’agent est stockée comme “claimer”.
+
+Le fallback `"agent"` joue ici le même rôle défensif que dans `createTask`.
+
+## Méthode `completeTask`
+
+```ts
+@Post(":taskId/complete")
+@Roles(Role.AGENT)
+completeTask(
+  @Param("taskId") taskId: string,
+  @Body() payload: CompleteScanTaskDto,
+  @Req() request: RequestWithUser
+) {
+  return this.scanQueueService.completeTask(taskId, request.user?.subject ?? "agent", payload);
+}
+```
+
+Cette méthode gère `POST /api/scan-tasks/:taskId/complete` et reste réservée au rôle `AGENT`. Elle combine trois sources d’entrée :
+- `taskId` depuis l’URL via `@Param("taskId")`,
+- `payload` depuis le corps via `@Body()`,
+- `request.user` via `@Req()`. [dev](https://dev.to/wakeup_flower_8591a6cb6a9/parameter-decorators-in-nestjs-2l5f)
+
+### Comportement
+
+Le controller transmet au service :
+- l’identifiant de la tâche,
+- le sujet de l’agent courant,
+- les données de complétion validées par `CompleteScanTaskDto`.
+
+### Lecture métier
+
+Le service pourra ainsi vérifier :
+- quelle tâche est concernée,
+- quel agent essaie de la compléter,
+- avec quel statut final,
+- et éventuellement quel `scan_id` ou message associer.
+
+## Flux de sécurité
+
+Le flux d’une requête typique est :
+1. la requête atteint le controller,
+2. `BasicAuthGuard` authentifie et enrichit la requête, [docs.nestjs](https://docs.nestjs.com/guards)
+3. `RolesGuard` compare le rôle courant à la metadata `@Roles(...)`, [docs.nestjs](https://docs.nestjs.com/security/authorization)
+4. si tout passe, Nest injecte `@Body()`, `@Param()` et `@Req()` dans la méthode, [docs.nestjs](https://docs.nestjs.com/controllers)
+5. le controller délègue au service.
+
+Ce flux est conforme au cycle de vie standard d’une requête Nest, où les guards précèdent l’exécution du handler. [docs.nestjs](https://docs.nestjs.com/faq/request-lifecycle)
+
+## Lecture architecturale
+
+Ce controller est propre et cohérent :
+- sécurité factorisée au niveau classe,
+- permissions précises au niveau méthode,
+- aucune logique SQL ou métier lourde dans le controller,
+- délégation complète à `ScanQueueService`.
+
+La séparation des rôles est aussi très claire :
+- **ADMIN** crée les tâches,
+- **VIEWER** consulte,
+- **AGENT** consomme et termine les tâches.
+
+C’est un design RBAC lisible et assez naturel pour un système d’orchestration de scans. [developer.auth0](https://developer.auth0.com/resources/code-samples/api/nestjs/basic-role-based-access-control)
+
+## Point d’attention
+
+L’usage répété de `@Req()` pour lire `request.user?.subject` fonctionne, mais Nest recommande souvent des décorateurs paramétriques plus ciblés ou custom decorators pour alléger les handlers quand on lit souvent les mêmes données. La documentation Nest montre justement que les custom param decorators peuvent rendre les handlers plus lisibles. [stackoverflow](https://stackoverflow.com/questions/77232416/nest-js-custom-decorator-that-will-return-parameter-from-request)
+
+Les fallbacks `"admin"` et `"agent"` sont défensifs, mais ils peuvent masquer un problème d’auth si `request.user` est absent alors qu’il ne devrait pas l’être. En prod, certains projets préfèrent échouer explicitement dans ce cas.
+
+## Traduction simple
+
+Ce controller sert à piloter la **file de tâches de scan** :
+- un admin ajoute une tâche,
+- un admin ou viewer regarde la file,
+- un agent prend la prochaine tâche,
+- un agent dit ensuite qu’il a fini la tâche.
+
+## Conclusion technique
+
+`ScanQueueController` est un **controller NestJS RBAC** sous `/api/scan-tasks`, protégé par `BasicAuthGuard` et `RolesGuard`, avec quatre endpoints qui répartissent les droits entre `ADMIN`, `VIEWER` et `AGENT`. Il utilise `@Body()`, `@Param()` et `@Req()` pour extraire les données de requête, puis délègue toute la logique métier à `ScanQueueService`. [docs.nestjs](https://docs.nestjs.com/security/authorization)
+
+***
+Ce service implémente la **logique métier de file de tâches de scan** au-dessus de PostgreSQL : création, listing, claim concurrent-safe et complétion. Le point le plus important est `SELECT ... FOR UPDATE SKIP LOCKED`, un pattern PostgreSQL classique pour distribuer des jobs entre plusieurs workers sans qu’ils prennent la même ligne, à condition de rester dans une transaction unique sur le même client. [postgresql](https://www.postgresql.org/docs/current/sql-select.html)
+
+## Le code
+
+```ts
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { randomUUID } from "crypto";
+import { DatabaseService } from "../../database/database.service";
+import { CompleteScanTaskDto, CreateScanTaskDto } from "./dto/scan-task.dto";
+
+@Injectable()
+export class ScanQueueService {
+  constructor(private readonly db: DatabaseService) {}
+
+  async createTask(payload: CreateScanTaskDto, requestedBy: string): Promise<Record<string, unknown>> {
+    const id = randomUUID();
+    const containerIds = payload.container_ids ?? [];
+
+    const result = await this.db.query(
+      `INSERT INTO scan_tasks (id, mode, status, requested_by, target_container_ids, message)
+       VALUES ($1, $2, 'queued', $3, $4::jsonb, $5)
+       RETURNING id, mode, status, requested_by, claimed_by, scan_id, target_container_ids, message, requested_at, claimed_at, completed_at`,
+      [id, payload.mode, requestedBy, JSON.stringify(containerIds), payload.message ?? null]
+    );
+
+    return this.normalizeTask(result.rows[0]);
+  }
+
+  async listTasks(): Promise<Record<string, unknown>[]> {
+    const result = await this.db.query(
+      `SELECT id, mode, status, requested_by, claimed_by, scan_id, target_container_ids, message, requested_at, claimed_at, completed_at
+       FROM scan_tasks
+       ORDER BY requested_at DESC`
+    );
+
+    return result.rows.map((row) => this.normalizeTask(row));
+  }
+
+  async claimNextTask(agentId: string): Promise<Record<string, unknown> | null> {
+    return this.db.transaction(async (client) => {
+      const candidate = await client.query<{ id: string }>(
+        `SELECT id
+         FROM scan_tasks
+         WHERE status = 'queued'
+         ORDER BY requested_at ASC
+         FOR UPDATE SKIP LOCKED
+         LIMIT 1`
+      );
+
+      if (candidate.rows.length === 0) {
+        return null;
+      }
+
+      const result = await client.query(
+        `UPDATE scan_tasks
+         SET status = 'processing', claimed_by = $2, claimed_at = NOW()
+         WHERE id = $1
+         RETURNING id, mode, status, requested_by, claimed_by, scan_id, target_container_ids, message, requested_at, claimed_at, completed_at`,
+        [candidate.rows[0].id, agentId]
+      );
+
+      return this.normalizeTask(result.rows[0]);
+    });
+  }
+
+  async completeTask(taskId: string, agentId: string, payload: CompleteScanTaskDto): Promise<Record<string, unknown>> {
+    const result = await this.db.query(
+      `UPDATE scan_tasks
+       SET status = $2,
+           scan_id = COALESCE($3, scan_id),
+           completed_at = NOW(),
+           claimed_by = COALESCE(claimed_by, $4),
+           message = COALESCE($5, message)
+       WHERE id = $1
+       RETURNING id, mode, status, requested_by, claimed_by, scan_id, target_container_ids, message, requested_at, claimed_at, completed_at`,
+      [taskId, payload.status, payload.scan_id ?? null, agentId, payload.message ?? null]
+    );
+
+    if (result.rows.length === 0) {
+      throw new NotFoundException("Task not found");
+    }
+
+    return this.normalizeTask(result.rows[0]);
+  }
+
+  private normalizeTask(row: Record<string, unknown> | undefined): Record<string, unknown> {
+    if (!row) {
+      return {};
+    }
+
+    return {
+      ...row,
+      container_ids: row.target_container_ids ?? []
+    };
+  }
+}
+```
+
+## Vue d’ensemble
+
+`ScanQueueService` est le service métier derrière le controller de scan tasks. Il injecte `DatabaseService`, génère les IDs de tâches avec `randomUUID()`, manipule la table `scan_tasks`, et convertit le format de sortie DB en format d’API via `normalizeTask()`. `crypto.randomUUID()` est bien utilisé pour produire des UUID v4 côté Node. [geeksforgeeks](https://www.geeksforgeeks.org/node-js/node-js-crypto-randomuuid-function/)
+
+## Imports
+
+`Injectable` rend le service injectable dans Nest. `NotFoundException` est une exception HTTP native de Nest qui produit une réponse 404 quand elle n’est pas interceptée plus tôt. [github](https://github.com/nestjs/nest/blob/master/packages/common/exceptions/not-found.exception.ts)
+
+`DatabaseService` apporte l’accès à PostgreSQL, y compris l’exécution transactionnelle correcte. `CreateScanTaskDto` et `CompleteScanTaskDto` typent les entrées métier déjà validées plus haut par la couche controller/pipe. [node-postgres](https://node-postgres.com/features/transactions)
+
+## Constructeur
+
+```ts
+constructor(private readonly db: DatabaseService) {}
+```
+
+Le service reçoit sa dépendance DB via injection de dépendances Nest. Cela suit le pattern standard des providers Nest qui consomment d’autres providers au constructeur. [docs.nestjs](https://docs.nestjs.com/providers)
+
+## `createTask(...)`
+
+```ts
+async createTask(payload: CreateScanTaskDto, requestedBy: string): Promise<Record<string, unknown>>
+```
+
+Cette méthode crée une nouvelle tâche dans l’état initial `queued`.
+
+### Variables locales
+
+```ts
+const id = randomUUID();
+const containerIds = payload.container_ids ?? [];
+```
+
+`id` est l’UUID de la tâche. `containerIds` vaut soit la liste fournie dans le DTO, soit un tableau vide si rien n’a été envoyé. [geeksforgeeks](https://www.geeksforgeeks.org/node-js/node-js-crypto-randomuuid-function/)
+
+### Requête SQL
+
+La requête fait un `INSERT` dans `scan_tasks` avec :
+- `id`
+- `mode`
+- `status = 'queued'`
+- `requested_by`
+- `target_container_ids`
+- `message`
+
+Elle caste explicitement `JSON.stringify(containerIds)` en `jsonb` via `$4::jsonb`, ce qui correspond bien au type `JSONB` de la colonne dans ton schéma précédent.
+
+### `RETURNING`
+
+La requête utilise `RETURNING` pour récupérer immédiatement la ligne créée sans faire de second `SELECT`. PostgreSQL documente `RETURNING` précisément comme un moyen d’obtenir les données modifiées au moment du `INSERT` ou `UPDATE`. [postgresql](https://www.postgresql.org/docs/current/dml-returning.html)
+
+### Retour
+
+```ts
+return this.normalizeTask(result.rows[0]);
+```
+
+Le service renvoie la ligne normalisée pour l’API.
+
+## `listTasks()`
+
+```ts
+async listTasks(): Promise<Record<string, unknown>[]>
+```
+
+Cette méthode lit toutes les tâches de `scan_tasks` triées par `requested_at DESC`, donc de la plus récente à la plus ancienne.
+
+### SQL
+
+La requête sélectionne :
+- les métadonnées d’identité,
+- le statut,
+- l’assignation,
+- l’éventuel `scan_id`,
+- les `target_container_ids`,
+- les timestamps.
+
+### Retour
+
+Chaque ligne est transformée via `normalizeTask(row)` pour harmoniser le champ `container_ids`.
+
+## `claimNextTask(agentId)`
+
+```ts
+async claimNextTask(agentId: string): Promise<Record<string, unknown> | null>
+```
+
+C’est la méthode la plus importante du service, car elle gère la concurrence entre plusieurs agents.
+
+### Pourquoi une transaction
+
+Elle utilise :
+
+```ts
+return this.db.transaction(async (client) => { ... })
+```
+
+C’est indispensable, car avec `node-postgres`, toutes les instructions d’une transaction doivent être exécutées avec le même client. [node-postgres](https://node-postgres.com/features/transactions)
+
+### Étape 1 : sélectionner une candidate
+
+```ts
+SELECT id
+FROM scan_tasks
+WHERE status = 'queued'
+ORDER BY requested_at ASC
+FOR UPDATE SKIP LOCKED
+LIMIT 1
+```
+
+Cette requête choisit la plus ancienne tâche `queued`, verrouille la ligne pour la transaction courante, et ignore celles déjà verrouillées par d’autres workers grâce à `SKIP LOCKED`. PostgreSQL documente bien que `SKIP LOCKED` saute les lignes qu’on ne peut pas verrouiller immédiatement, ce qui est très utile pour les queues concurrentes. [w3resource](https://www.w3resource.com/postgresql-exercises/postgresql-query-to-lock-rows-using-select-for-update-with-the-skip-locked-option-to-process-only-unlocked-rows.php)
+
+### Pourquoi c’est bon pour une queue
+
+Si deux agents appellent `claimNextTask()` en même temps :
+- le premier locke une ligne,
+- le second ignore cette ligne verrouillée,
+- et tente la suivante disponible.
+
+C’est exactement le pattern de distribution concurrente de jobs. [inferable](https://www.inferable.ai/blog/posts/postgres-skip-locked)
+
+### Cas vide
+
+```ts
+if (candidate.rows.length === 0) {
+  return null;
+}
+```
+
+S’il n’y a aucune tâche `queued`, la méthode renvoie `null`.
+
+### Étape 2 : marquer la tâche comme en cours
+
+```ts
+UPDATE scan_tasks
+SET status = 'processing', claimed_by = $2, claimed_at = NOW()
+WHERE id = $1
+RETURNING ...
+```
+
+Une fois la ligne sélectionnée et verrouillée, la méthode la met à jour en :
+- `processing`,
+- `claimed_by = agentId`,
+- `claimed_at = NOW()`.
+
+Puis elle retourne la ligne mise à jour via `RETURNING`. Là encore, `RETURNING` évite une requête supplémentaire. [postgresql](https://www.postgresql.org/docs/current/dml-returning.html)
+
+### Retour
+
+La méthode renvoie la tâche normalisée, ou `null` s’il n’y avait rien à prendre.
+
+## `completeTask(taskId, agentId, payload)`
+
+```ts
+async completeTask(taskId: string, agentId: string, payload: CompleteScanTaskDto): Promise<Record<string, unknown>>
+```
+
+Cette méthode finalise une tâche existante.
+
+### SQL
+
+La requête fait un `UPDATE scan_tasks` avec plusieurs règles intéressantes :
+
+- `status = $2` : met le statut final reçu du DTO
+- `scan_id = COALESCE($3, scan_id)` : ne remplace `scan_id` que si un nouveau `scan_id` est fourni
+- `completed_at = NOW()` : marque la date de fin
+- `claimed_by = COALESCE(claimed_by, $4)` : renseigne l’agent seulement si personne n’était déjà renseigné
+- `message = COALESCE($5, message)` : remplace le message uniquement si un nouveau message est fourni
+
+### Utilisation de `COALESCE`
+
+`COALESCE(a, b)` retourne la première valeur non nulle. Ici, cela permet de faire des mises à jour partielles sans écraser les valeurs déjà présentes si le payload ne fournit rien. C’est une manière simple et efficace d’encoder un “patch” SQL.
+
+### Vérification d’existence
+
+```ts
+if (result.rows.length === 0) {
+  throw new NotFoundException("Task not found");
+}
+```
+
+Si aucune ligne n’a été modifiée, cela veut dire que `id = taskId` n’existe pas. Le service lève alors une `NotFoundException`, ce qui devient une réponse HTTP 404 côté Nest. [docs.nestjs](https://docs.nestjs.com/exception-filters)
+
+### Retour
+
+Sinon, il renvoie la tâche normalisée après update.
+
+## `normalizeTask(...)`
+
+```ts
+private normalizeTask(row: Record<string, unknown> | undefined): Record<string, unknown>
+```
+
+Cette méthode convertit un enregistrement DB brut vers un format de réponse plus pratique côté API.
+
+### Cas vide
+
+```ts
+if (!row) {
+  return {};
+}
+```
+
+Si la ligne est absente ou indéfinie, elle renvoie un objet vide.
+
+### Transformation
+
+```ts
+return {
+  ...row,
+  container_ids: row.target_container_ids ?? []
+};
+```
+
+Elle conserve tous les champs originaux et ajoute `container_ids`, alias de `target_container_ids`.
+
+### Intérêt
+
+Cela permet au client API de consommer un nom plus naturel ou plus cohérent avec les DTO d’entrée, sans changer immédiatement le schéma SQL.
+
+### Limite
+
+Le champ `target_container_ids` n’est pas supprimé, donc le résultat contient à la fois :
+- `target_container_ids`
+- `container_ids`
+
+C’est parfois pratique, mais parfois ambigu.
+
+## Flux global
+
+Le workflow complet du service est :
+
+- `createTask()` : ajoute une ligne `queued`
+- `listTasks()` : lit toutes les lignes
+- `claimNextTask()` : choisit atomiquement la plus ancienne tâche disponible et la passe en `processing`
+- `completeTask()` : termine une tâche avec statut, scan éventuel et message
+- `normalizeTask()` : harmonise la forme de sortie
+
+## Lecture architecturale
+
+Ce service est bien pensé pour un système de queue simple basé sur PostgreSQL :
+
+- pas besoin de Redis ou RabbitMQ pour un volume modéré,
+- la DB joue à la fois le rôle de persistance et de file,
+- `FOR UPDATE SKIP LOCKED` permet de faire du multi-worker sans doublon de claim. [alexstoica](https://alexstoica.com/blog/postgres-select-for-update-perf)
+
+C’est un pattern très courant et robuste pour des workloads backend modestes à intermédiaires.
+
+## Points d’attention
+
+`completeTask()` ne vérifie pas que l’agent qui complète la tâche est bien celui qui l’a claimée. En l’état, n’importe quel agent authentifié avec le bon rôle pourrait compléter n’importe quelle tâche existante. C’est un choix métier possible, mais il faut en être conscient.
+
+`completeTask()` n’empêche pas non plus :
+- de compléter une tâche déjà `completed`,
+- ou de passer une tâche de `failed` à `processing`,
+puisque la transition d’état n’est pas contrainte ici au niveau applicatif.
+
+`normalizeTask()` ajoute `container_ids` mais garde `target_container_ids`, donc l’API expose deux représentations proches de la même donnée.
+
+Le type de retour `Record<string, unknown>` est fonctionnel mais peu expressif. Un type dédié `ScanTaskResponseDto` ou `ScanTask` serait plus propre pour la lisibilité et l’outillage TypeScript.
+
+## Traduction simple
+
+Ce service fait fonctionner la file de tâches :
+- on crée une tâche,
+- on peut lister les tâches,
+- un agent prend la prochaine tâche libre,
+- puis il la marque comme terminée.
+
+Le point malin, c’est que PostgreSQL évite que deux agents prennent la même tâche en même temps grâce à `FOR UPDATE SKIP LOCKED`. [postgresql](https://www.postgresql.org/docs/current/sql-select.html)
+
+## Conclusion technique
+
+`ScanQueueService` est le **service métier de queue** pour `scan_tasks`. Il crée les tâches en `queued`, les liste, attribue la prochaine tâche libre via une transaction `SELECT ... FOR UPDATE SKIP LOCKED`, puis permet de compléter une tâche avec mise à jour partielle via `COALESCE`, en levant une `NotFoundException` si l’ID n’existe pas. [github](https://github.com/nestjs/nest/blob/master/packages/common/exceptions/not-found.exception.ts)
+
+***
+`scheduling.module` est un **feature module NestJS** qui regroupe deux responsabilités liées à l’orchestration : la file de tâches de scan et la mise à jour périodique des métadonnées CVE. Dans Nest, un module déclare ses controllers, ses providers, et éventuellement les providers qu’il rend visibles à d’autres modules via `exports`. [docs.nestjs](https://docs.nestjs.com/modules)
+
+## Le code
+
+```ts
+import { Module } from "@nestjs/common";
+import { CveUpdaterService } from "./cve-updater.service";
+import { ScanQueueController } from "./scan-queue.controller";
+import { ScanQueueService } from "./scan-queue.service";
+
+@Module({
+  controllers: [ScanQueueController],
+  providers: [CveUpdaterService, ScanQueueService],
+  exports: [ScanQueueService]
+})
+export class SchedulingModule {}
+```
+
+## Import `Module`
+
+`Module` est le décorateur NestJS utilisé pour définir un module et sa metadata structurelle. La documentation Nest décrit `controllers`, `providers`, `imports` et `exports` comme les principaux champs de composition d’un module. [docs.nestjs](https://docs.nestjs.com/modules)
+
+## `@Module({...})`
+
+L’objet passé à `@Module()` décrit ce que le module contient et ce qu’il expose :
+- `controllers: [ScanQueueController]`
+- `providers: [CveUpdaterService, ScanQueueService]`
+- `exports: [ScanQueueService]` [docs.nest-js](https://docs.nest-js.fr/modules)
+
+Cela signifie que le module :
+- instancie un controller HTTP,
+- instancie deux services,
+- rend `ScanQueueService` injectable ailleurs.
+
+## `controllers: [ScanQueueController]`
+
+Cette ligne enregistre `ScanQueueController` comme controller du module. Les controllers Nest sont responsables de recevoir les requêtes HTTP et de déléguer la logique métier aux services. [docs.nestjs](https://docs.nestjs.com/controllers)
+
+### Conséquence
+
+Toutes les routes de scan tasks définies dans `ScanQueueController` appartiennent fonctionnellement à `SchedulingModule`.
+
+## `providers: [CveUpdaterService, ScanQueueService]`
+
+Cette ligne déclare deux providers injectables dans le scope du module :
+- `CveUpdaterService`
+- `ScanQueueService`
+
+Les providers sont les classes instanciées par l’injecteur Nest, comme les services, repositories, factories ou helpers. [docs.nestjs](https://docs.nestjs.com/providers)
+
+### `ScanQueueService`
+
+Il porte la logique métier de la queue :
+- création,
+- listing,
+- claim,
+- complétion des tâches.
+
+### `CveUpdaterService`
+
+Il porte la logique de fond planifiée :
+- exécution au démarrage,
+- cron périodique,
+- journalisation des tentatives de refresh NVD.
+
+Comme ces deux classes sont dans `providers`, Nest les instanciera dans le cycle de vie du module. Les hooks lifecycle comme `onModuleInit()` et `onModuleDestroy()` font partie du cycle de vie applicatif géré par Nest. [docs.nestjs](https://docs.nestjs.com/fundamentals/lifecycle-events)
+
+## `exports: [ScanQueueService]`
+
+Cette ligne expose `ScanQueueService` à d’autres modules qui importeraient `SchedulingModule`. Nest encapsule les providers par défaut, donc un provider doit être explicitement exporté pour devenir injectable à l’extérieur de son module hôte. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+### Conséquence
+
+Un autre module pourra faire :
+
+- `imports: [SchedulingModule]`
+- puis injecter `ScanQueueService`
+
+sans avoir à le redéclarer localement.
+
+### Détail important
+
+`CveUpdaterService` n’est pas exporté, donc il reste interne à `SchedulingModule`. Cela suggère que ce service est considéré comme une mécanique interne de scheduling, pas comme une API métier réutilisable.
+
+## Classe `SchedulingModule`
+
+```ts
+export class SchedulingModule {}
+```
+
+La classe elle-même est vide, ce qui est normal pour un module Nest classique. La vraie configuration du module se trouve dans le décorateur `@Module(...)`. [docs.nestjs](https://docs.nestjs.com/modules)
+
+## Lecture architecturale
+
+Ce module mélange deux sous-domaines proches :
+- la **queue de scan** exposée en HTTP,
+- le **job périodique CVE** exécuté en arrière-plan.
+
+Ce regroupement a du sens si tu interprètes “scheduling” comme “tout ce qui orchestre des traitements asynchrones ou planifiés”. `ScanQueueController` et `ScanQueueService` gèrent des tâches distribuées aux agents, tandis que `CveUpdaterService` gère une tâche périodique interne au backend.
+
+## Point intéressant sur le cycle de vie
+
+Comme `CveUpdaterService` est un provider du module et implémente des hooks lifecycle, il sera démarré avec le module. Nest documente le cycle de vie global, mais il existe aussi une subtilité récente discutée côté framework : l’ordre exact des hooks entre providers d’un même module n’est pas toujours garanti de manière topologique stricte. [github](https://github.com/nestjs/nest/issues/14773)
+
+Dans ton cas, ce n’est pas forcément problématique, car :
+- `CveUpdaterService` dépend surtout de `DatabaseService`,
+- pas de `ScanQueueService`,
+- donc il n’y a pas ici de dépendance croisée évidente entre providers du même module.
+
+## Lecture par responsabilité
+
+| Élément | Rôle |
+|---|---|
+| `SchedulingModule` | frontière fonctionnelle du domaine scheduling |
+| `ScanQueueController` | couche HTTP pour `scan_tasks` |
+| `ScanQueueService` | logique métier de queue |
+| `CveUpdaterService` | job de fond périodique NVD |
+| `exports: [ScanQueueService]` | partage la logique de queue avec d’autres modules |
+
+## Traduction simple
+
+Tu peux voir ce module comme :
+
+- la boîte “orchestration / scheduling”,
+- dedans il y a un endpoint HTTP pour gérer les tâches de scan,
+- et un service de fond qui vérifie régulièrement les métadonnées CVE,
+- et seul le service de queue est réutilisable depuis d’autres modules.
+
+## Conclusion technique
+
+`SchedulingModule` est un **module NestJS de scheduling/orchestration** qui enregistre `ScanQueueController` comme controller HTTP, `ScanQueueService` et `CveUpdaterService` comme providers internes, puis exporte `ScanQueueService` pour le rendre injectable dans d’autres modules. Cela reflète bien l’encapsulation des providers par module dans Nest et l’usage des hooks lifecycle pour les services de fond comme `CveUpdaterService`. [docs.nestjs](https://docs.nestjs.com/fundamentals/custom-providers)
+
+Le fichier le plus logique à analyser ensuite, c’est soit `app.module.ts` pour voir l’assemblage global, soit `scans.controller.ts` s’il te manque encore la couche HTTP des scans.
