@@ -63,7 +63,11 @@ export class CreateContainerScanDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateVulnerabilityDto)
-  vulnerabilities!: CreateVulnerabilityDto[];
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVulnerabilityDto)
+  vulnerabilities?: CreateVulnerabilityDto[];
 }
 
 export class CreateSummaryDto {

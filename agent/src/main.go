@@ -14,22 +14,53 @@ import (
 )
 
 func main() {
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("configuration error: %v", err)
+	cfg, loadErr := config.Load()
+	if loadErr != nil {
+		log.Fatalf("configuration error: %v", loadErr)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ScanTimeout)
 	defer cancel()
 
-	task, err := transport.ClaimTask(ctx, cfg.TaskClaimEndpoint(), cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify)
-	if err != nil {
+	// Try to claim a task with retry/backoff until context deadline
+	var task *models.ScanTask
+	var err error
+	backoff := 1 * time.Second
+	claimLoop:
+	for {
+		task, err = transport.ClaimTask(ctx, cfg.TaskClaimEndpoint(), cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify)
+		if err == nil {
+			break
+		}
 		log.Printf("task claim error: %v", err)
+		select {
+		case <-ctx.Done():
+			log.Printf("giving up task claim: %v", ctx.Err())
+			break claimLoop
+		case <-time.After(backoff):
+			if backoff < 8*time.Second {
+				backoff *= 2
+			}
+		}
 	}
 
-	containers, err := dockerclient.Discover(ctx, cfg.DockerSocket)
-	if err != nil {
-		log.Fatalf("docker discovery error: %v", err)
+	// Discover Docker containers with retry/backoff (handle transient permission/DNS issues)
+	var containers []dockerclient.Container
+	backoff = 1 * time.Second
+	for {
+		containers, err = dockerclient.Discover(ctx, cfg.DockerSocket)
+		if err == nil {
+			break
+		}
+		log.Printf("docker discovery error: %v", err)
+		select {
+		case <-ctx.Done():
+			log.Fatalf("docker discovery giving up: %v", ctx.Err())
+		case <-time.After(backoff):
+			if backoff < 8*time.Second {
+				backoff *= 2
+			}
+		}
 	}
 
 	scanType := cfg.ScanType

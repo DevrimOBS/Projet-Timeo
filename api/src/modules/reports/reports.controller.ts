@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import { Controller, Get, Inject, Param, UseGuards } from "@nestjs/common";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Role } from "../../common/enums/role.enum";
 import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
@@ -9,7 +9,7 @@ import { ReportsService } from "./reports.service";
 @UseGuards(BasicAuthGuard, RolesGuard)
 @Roles(Role.ADMIN, Role.VIEWER)
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(@Inject(ReportsService) private readonly reportsService: ReportsService) {}
 
   @Get("overview")
   getOverview() {

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { CreateScanDto } from "./dto/create-scan.dto";
@@ -12,7 +12,7 @@ function severityFromCvss(cvss: number): "critical" | "high" | "medium" | "low" 
 
 @Injectable()
 export class ScansService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   async createScan(payload: CreateScanDto): Promise<{ scanId: string }> {
     const scanId = randomUUID();
@@ -56,7 +56,7 @@ export class ScansService {
 
         const containerRowId = containerInsert.rows[0].id;
 
-        for (const vuln of container.vulnerabilities) {
+        for (const vuln of (container.vulnerabilities ?? [])) {
           await client.query(
             `INSERT INTO vulnerabilities
               (container_row_id, cve, cwe, package_name, installed_version, fixed_version, cvss, severity, title, remediation, description, source)

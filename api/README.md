@@ -1,3 +1,26 @@
+E2E tests
+---------
+
+Run the jest e2e tests (requires dev dependencies install):
+
+```bash
+cd api
+npm install
+npm run test:e2e
+```
+
+Or run the smoke script (bash):
+
+```bash
+./api/tests/e2e/run-e2e-smoke.sh
+```
+
+Or PowerShell script on Windows:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\api\tests\e2e\run-e2e-smoke.ps1
+```
+
 # API (NestJS)
 
 Backend central pour la reception des scans, le stockage historique PostgreSQL et l exposition des vues dashboard.

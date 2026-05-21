@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { DatabaseService } from "../../database/database.service";
 import { CompleteScanTaskDto, CreateScanTaskDto } from "./dto/scan-task.dto";
 
 @Injectable()
 export class ScanQueueService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
 
   async createTask(payload: CreateScanTaskDto, requestedBy: string): Promise<Record<string, unknown>> {
     const id = randomUUID();

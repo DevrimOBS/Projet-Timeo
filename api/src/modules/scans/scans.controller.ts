@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Inject, Post, UseGuards } from "@nestjs/common";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Role } from "../../common/enums/role.enum";
 import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
@@ -9,7 +9,7 @@ import { ScansService } from "./scans.service";
 @Controller("api/scans")
 @UseGuards(BasicAuthGuard, RolesGuard)
 export class ScansController {
-  constructor(private readonly scansService: ScansService) {}
+  constructor(@Inject(ScansService) private readonly scansService: ScansService) {}
 
   @Post()
   @Roles(Role.ADMIN, Role.AGENT)

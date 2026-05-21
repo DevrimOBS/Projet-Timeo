@@ -59,6 +59,9 @@ func ClaimTask(ctx context.Context, endpoint, token string, timeout time.Duratio
 
 	var task models.ScanTask
 	if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
+		if err == io.EOF {
+			return nil, nil
+		}
 		return nil, err
 	}
 
