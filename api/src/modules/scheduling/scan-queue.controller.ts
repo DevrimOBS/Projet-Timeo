@@ -3,7 +3,7 @@ import { Roles } from "../../common/decorators/roles.decorator";
 import { Role } from "../../common/enums/role.enum";
 import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
-import { RequestWithUser } from "../../common/types/request-with-user";
+import type { RequestWithUser } from "../../common/types/request-with-user";
 import { CompleteScanTaskDto, CreateScanTaskDto } from "./dto/scan-task.dto";
 import { ScanQueueService } from "./scan-queue.service";
 

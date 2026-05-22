@@ -1,5 +1,43 @@
 import { randomUUID } from "crypto";
-import { ScanReport, ScheduledAudit, TriggerRequest, Vulnerability } from "../common/types";
+
+type VulnerabilitySeverity = "critical" | "high" | "medium" | "low";
+
+interface Vulnerability {
+  severity: VulnerabilitySeverity;
+  cve: string;
+  cwe?: string | null;
+  package_name: string;
+  installedVersion?: string | null;
+  fixedVersion?: string | null;
+  cvss: number;
+  title?: string | null;
+  remediation?: string | null;
+  description?: string | null;
+  source?: string | null;
+}
+
+interface ScanContainer {
+  containerId: string;
+  vulnerabilities: Vulnerability[];
+}
+
+interface ScanReport {
+  scanId: string;
+  containers: ScanContainer[];
+}
+
+interface ScheduledAudit {
+  id: string;
+  createdAt: string;
+}
+
+interface TriggerRequest {
+  id: string;
+  mode: "global" | "targeted";
+  containerIds: string[];
+  createdAt: string;
+  status: "queued" | "done";
+}
 
 interface InMemoryStore {
   scans: ScanReport[];
@@ -51,7 +89,7 @@ export function upsertSchedule(schedule: Omit<ScheduledAudit, "id" | "createdAt"
   return created;
 }
 
-export function listVulnerabilities(containerId?: string, severity?: Vulnerability["severity"]): Vulnerability[] {
+export function listVulnerabilities(containerId?: string, severity?: VulnerabilitySeverity): Vulnerability[] {
   const vulnerabilities = store.scans.flatMap((scan) =>
     scan.containers.flatMap((container) =>
       container.vulnerabilities
