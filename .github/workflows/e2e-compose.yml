@@ -30,7 +30,7 @@ jobs:
 
       - name: Install API deps
         working-directory: ./api
-        run: npm.cmd ci || npm.cmd install
+        run: npm ci || npm install
 
       - name: Run e2e tests
         working-directory: ./api
