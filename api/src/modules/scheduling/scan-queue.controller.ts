@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Inject, Param, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Role } from "../../common/enums/role.enum";
 import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
@@ -25,6 +25,7 @@ export class ScanQueueController {
   }
 
   @Post("claim")
+  @HttpCode(200)
   @Roles(Role.AGENT)
   async claimTask(@Req() request: RequestWithUser, @Res({ passthrough: true }) response: any) {
     const task = await this.scanQueueService.claimNextTask(request.user?.subject ?? "agent");
