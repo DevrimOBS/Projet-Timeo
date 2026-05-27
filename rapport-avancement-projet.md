@@ -128,5 +128,3 @@ Les commits suggèrent plusieurs axes de maturité :
 
 ## Conclusion
 L’analyse des commits montre une progression nette et cohérente du projet. Le dépôt est passé d’un squelette initial à une plateforme multi-services structurée autour d’un agent, d’une API NestJS, d’une interface web, d’une base de données et d’un pipeline de tests E2E. Les derniers commits montrent une phase de stabilisation, ce qui est un bon signe : le projet n’est plus seulement en construction, il commence à être consolidé.
-
-Si vous voulez, je peux aussi transformer ce rapport en version plus scolaire, plus courte, ou plus orientée soutenance/projet de fin d’études.
