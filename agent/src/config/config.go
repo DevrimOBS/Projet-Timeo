@@ -15,6 +15,8 @@ type Config struct {
 	AgentID               string
 	APIURL                string
 	APIToken              string
+	AgentUser             string
+	AgentPassword         string
 	DockerSocket          string
 	TrivyPath             string
 	TrivyEnabled          bool
@@ -163,6 +165,12 @@ func applyValues(cfg *Config, values map[string]string) {
 			cfg.TrivyEnabled = parsed
 		}
 	}
+	if v, ok := values["agentuser"]; ok && v != "" {
+		cfg.AgentUser = v
+	}
+	if v, ok := values["agentpassword"]; ok && v != "" {
+		cfg.AgentPassword = v
+	}
 	if v, ok := values["scantype"]; ok && v != "" {
 		cfg.ScanType = v
 	}
@@ -192,6 +200,12 @@ func applyEnv(cfg *Config) {
 	}
 	if v := strings.TrimSpace(os.Getenv("API_TOKEN")); v != "" {
 		cfg.APIToken = v
+	}
+	if v := strings.TrimSpace(os.Getenv("AGENT_USER")); v != "" {
+		cfg.AgentUser = v
+	}
+	if v := strings.TrimSpace(os.Getenv("AGENT_PASSWORD")); v != "" {
+		cfg.AgentPassword = v
 	}
 	if v := strings.TrimSpace(os.Getenv("DOCKER_SOCKET")); v != "" {
 		cfg.DockerSocket = v

@@ -19,9 +19,15 @@ jobs:
       - name: Start compose stack
         run: docker compose -f docker-compose.yml up -d --build
 
+      - name: Force Trivy DB update (cve-updater)
+        run: |
+          # try exec then run
+          docker compose -f docker-compose.yml exec cve-updater trivy db update || \
+          docker compose -f docker-compose.yml run --rm cve-updater trivy db update || true
+
       - name: Wait for API to be ready
         run: |
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             if curl -sS http://localhost:3000/api/scan-tasks -H "Authorization: Bearer admin-dev-token" >/dev/null; then
               echo "API ready"; break
             fi
