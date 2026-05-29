@@ -22,6 +22,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.ScanTimeout)
 	defer cancel()
 
+	// Ensure Trivy DB is updated before running scans when enabled
+	if cfg.TrivyEnabled {
+		if err := scanner.UpdateDB(ctx, cfg.TrivyPath); err != nil {
+			log.Printf("trivy db update warning: %v", err)
+		} else {
+			log.Printf("trivy DB updated")
+		}
+	}
+
 	// Try to claim a task with retry/backoff until context deadline
 	var task *models.ScanTask
 	var err error

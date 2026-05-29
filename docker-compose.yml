@@ -21,6 +21,7 @@ services:
     container_name: novisec-api
     ports:
       - "3000:3001"
+      - "3002:3002"
     environment:
       - PORT=3001
       - POSTGRES_HOST=db
@@ -31,10 +32,23 @@ services:
       - ADMIN_TOKEN=admin-dev-token
       - VIEWER_TOKEN=viewer-dev-token
       - AGENT_TOKEN=agent-dev-token
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD=admin-pass
+      - VIEWER_USER=viewer
+      - VIEWER_PASSWORD=viewer-pass
+      - AGENT_USER=agent
+      - AGENT_PASSWORD=agent-pass
+      - AUTH_JWT_SECRET=change-me-in-prod
+      - AUTH_JWT_EXPIRES_IN=8h
+      - HTTPS_ENABLED=true
+      - HTTPS_KEY_FILE=/certs/server.key
+      - HTTPS_CERT_FILE=/certs/server.crt
     depends_on:
       - db
     networks:
       - novisec-net
+    volumes:
+      - ./certs:/certs:ro
 
   frontend:
     build: ./web
@@ -60,6 +74,14 @@ services:
       - novisec-net
     ports:
       - "5432:5432"
+
+  cve-updater:
+    image: aquasec/trivy:0.44.1
+    container_name: novisec-cve-updater
+    restart: unless-stopped
+    networks:
+      - novisec-net
+    command: sh -c "while true; do trivy db update || true; sleep 21600; done"
 
 volumes:
   db-data:

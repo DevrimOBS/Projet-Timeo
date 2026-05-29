@@ -2,6 +2,7 @@ import { Request } from "express";
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Role } from "../enums/role.enum";
 import { RequestWithUser } from "../types/request-with-user";
+import { verifyToken } from "../utils/jwt";
 
 
 @Injectable()
@@ -15,11 +16,19 @@ export class BasicAuthGuard implements CanActivate {
     }
 
     const [scheme, token] = authHeader.split(" ");
-
     if (scheme !== "Bearer" || !token) {
       throw new UnauthorizedException("Use Bearer token");
     }
 
+    // 1) Try JWT verification first
+    const payload = verifyToken(token);
+    if (payload) {
+      const role = payload.role as Role;
+      req.user = { role, subject: payload.sub } as any;
+      return true;
+    }
+
+    // 2) Fallback to legacy static tokens (env)
     const adminToken = process.env.ADMIN_TOKEN ?? "admin-dev-token";
     const viewerToken = process.env.VIEWER_TOKEN ?? "viewer-dev-token";
     const agentToken = process.env.AGENT_TOKEN ?? "agent-dev-token";

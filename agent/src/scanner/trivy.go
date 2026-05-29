@@ -83,3 +83,23 @@ func ScanImage(ctx context.Context, trivyPath, image string) ([]models.Vulnerabi
 
 	return normalizeVulnerabilities(findings), nil
 }
+
+// UpdateDB ensures the local Trivy vulnerability DB is up-to-date.
+func UpdateDB(ctx context.Context, trivyPath string) error {
+	binary := strings.TrimSpace(trivyPath)
+	if binary == "" {
+		binary = "trivy"
+	}
+
+	if _, err := exec.LookPath(binary); err != nil {
+		// If trivy binary isn't available, nothing to update.
+		return nil
+	}
+
+	cmd := exec.CommandContext(ctx, binary, "db", "update")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("trivy db update failed: %v: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}

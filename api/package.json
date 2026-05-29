@@ -12,6 +12,8 @@
     "@nestjs/common": "^11.0.3",
     "@nestjs/core": "^11.0.3",
     "@nestjs/platform-express": "^11.0.3",
+    "jsonwebtoken": "^9.0.0",
+    "speakeasy": "^2.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "node-cron": "^4.2.1",
