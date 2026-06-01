@@ -23,30 +23,41 @@ async function bootstrap(): Promise<void> {
 	const useHttps = process.env.HTTPS_ENABLED === 'true';
 	
 	if (useHttps) {
+		const pfxPath = process.env.HTTPS_PFX_FILE;
+		const pfxPassword = process.env.HTTPS_PFX_PASSPHRASE;
 		const keyPath = process.env.HTTPS_KEY_FILE;
 		const certPath = process.env.HTTPS_CERT_FILE;
 
-		if (!keyPath || !certPath) {
-			throw new Error('HTTPS_ENABLED=true but HTTPS_KEY_FILE or HTTPS_CERT_FILE not set');
+		let httpsOptions: { pfx?: Buffer; passphrase?: string; key?: Buffer; cert?: Buffer };
+
+		if (pfxPath) {
+			if (!fs.existsSync(pfxPath)) {
+				throw new Error(`HTTPS certificate file not found: ${pfxPath}`);
+			}
+			httpsOptions = {
+				pfx: fs.readFileSync(pfxPath),
+				passphrase: pfxPassword
+			};
+		} else if (keyPath && certPath) {
+			if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
+				throw new Error(`HTTPS certificate files not found: ${keyPath} or ${certPath}`);
+			}
+			httpsOptions = {
+				key: fs.readFileSync(keyPath),
+				cert: fs.readFileSync(certPath)
+			};
+		} else {
+			throw new Error('HTTPS_ENABLED=true but HTTPS_PFX_FILE or HTTPS_KEY_FILE/HTTPS_CERT_FILE not set');
 		}
 
-		if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
-			throw new Error(`HTTPS certificate files not found: ${keyPath} or ${certPath}`);
-		}
-
-		const httpsOptions = {
-			key: fs.readFileSync(keyPath),
-			cert: fs.readFileSync(certPath),
-		};
-
-		await app.listen(port, 'localhost');
+		await app.listen(port, '0.0.0.0');
 		const server = https.createServer(httpsOptions, app.getHttpServer());
 		server.listen(port + 1, () => {
 			console.log(`🔒 HTTPS server running on https://localhost:${port + 1}`);
 		});
 		console.log(`✅ HTTP server running on http://localhost:${port}`);
 	} else {
-		await app.listen(port);
+		await app.listen(port, '0.0.0.0');
 		console.log(`✅ API server running on http://localhost:${port}`);
 	}
 }

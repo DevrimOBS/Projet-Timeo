@@ -42,8 +42,8 @@ services:
       - AUTH_JWT_SECRET=change-me-in-prod
       - AUTH_JWT_EXPIRES_IN=8h
       - HTTPS_ENABLED=true
-      - HTTPS_KEY_FILE=/certs/server.key
-      - HTTPS_CERT_FILE=/certs/server.crt
+      - HTTPS_PFX_FILE=/certs/server.pfx
+      - HTTPS_PFX_PASSPHRASE=novisec-secure-pass
     depends_on:
       - db
     networks:
@@ -82,7 +82,8 @@ services:
     restart: unless-stopped
     networks:
       - novisec-net
-    command: sh -c "while true; do trivy db update || true; sleep 21600; done"
+    entrypoint: ["sh", "-c"]
+    command: "while true; do trivy db update || true; sleep 21600; done"
 
 volumes:
   db-data:
