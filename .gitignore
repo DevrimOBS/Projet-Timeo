@@ -10,3 +10,9 @@ bin/
 cache/
 dist/
 build/
+certs/
+*.key
+*.crt
+.env.local
+.env.production
+db-data/

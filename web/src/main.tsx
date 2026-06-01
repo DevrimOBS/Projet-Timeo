@@ -4,6 +4,7 @@ import Overview from "./pages/Overview";
 import Containers from "./pages/Containers";
 import Reports from "./pages/Reports";
 import Vulnerabilities from "./pages/Vulnerabilities";
+import Login from "./components/Login";
 import { api } from "./services/api";
 import { ContainerDetails, MatrixData, OverviewData, ScanTask } from "./types";
 import "./styles.css";
@@ -21,6 +22,7 @@ function App() {
 	const [error, setError] = useState<string | null>(null);
 	const [apiUrl, setApiUrl] = useState(api.getApiBaseUrl());
 	const [token, setToken] = useState(api.getToken());
+	const [showLogin, setShowLogin] = useState(false);
 
 	async function loadData(containerId = selectedContainerId) {
 		setLoading(true);
@@ -53,6 +55,12 @@ function App() {
 		void loadData();
 	}
 
+	function handleLoginSuccess(newToken: string) {
+		setToken(newToken);
+		api.saveConnectionSettings(api.getApiBaseUrl(), newToken);
+		void loadData();
+	}
+
 	return (
 		<div className="app-shell">
 			<header className="topbar">
@@ -69,9 +77,14 @@ function App() {
 						Bearer token
 						<input value={token} onChange={(event) => setToken(event.target.value)} placeholder="admin-dev-token" />
 					</label>
-					<button className="button" onClick={handleConnectionSave} type="button">
-						Sauvegarder et recharger
-					</button>
+					<div style={{ display: "flex", gap: 8 }}>
+						<button className="button" onClick={handleConnectionSave} type="button">
+							Sauvegarder et recharger
+						</button>
+						<button className="button button-secondary" onClick={() => setShowLogin(true)} type="button">
+							Se connecter
+						</button>
+					</div>
 				</div>
 			</header>
 
@@ -89,6 +102,13 @@ function App() {
 			</nav>
 
 			{error ? <div className="banner error">{error}</div> : null}
+
+			{showLogin ? (
+				<Login
+					onClose={() => setShowLogin(false)}
+					onSuccess={(t) => handleLoginSuccess(t)}
+				/>
+			) : null}
 
 			{activeTab === "overview" ? <Overview overview={overview} matrix={matrix} loading={loading} /> : null}
 			{activeTab === "containers" ? (
@@ -118,3 +138,5 @@ function App() {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+export {}

@@ -402,3 +402,32 @@ input {
     flex-wrap: wrap;
   }
 }
+
+/* Modal login styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 12, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  width: min(520px, calc(100% - 40px));
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.modal h3 {
+  margin-top: 0;
+}
+
+.modal .form-label input {
+  padding: 10px 12px;
+}
+
+.modal .muted.error {
+  color: var(--danger);
+}

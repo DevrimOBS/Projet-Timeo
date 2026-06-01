@@ -1,3 +1,14 @@
+/*
+ * DEPRECATED: in-memory `store.ts`
+ *
+ * Cette implementation est conservée pour développement/local et documentation,
+ * mais l'application principale utilise désormais PostgreSQL via
+ * `DatabaseService` (voir `api/src/database/database.service.ts`).
+ *
+ * Ne pas utiliser en production. Préférer les appels à la base de données
+ * relationnelle. Ce fichier est laissé pour compatibilité locale et tests.
+ */
+
 import { randomUUID } from "crypto";
 
 type VulnerabilitySeverity = "critical" | "high" | "medium" | "low";

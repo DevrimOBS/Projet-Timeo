@@ -116,10 +116,6 @@ func fetchAuthToken(ctx context.Context, loginURL, user, pass string, timeout ti
 		return "", fmt.Errorf("auth login failed: %s: %s", resp.Status, strings.TrimSpace(string(b)))
 	}
 
-	var result struct{
-		token string `json:"token"`
-		expiresIn string `json:"expiresIn"`
-	}
 	// Use a map as structure keys may differ in casing
 	var out map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

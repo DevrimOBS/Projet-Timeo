@@ -2,6 +2,7 @@ services:
   agent:
     build: ./agent
     container_name: novisec-agent
+    read_only: true
     environment:
       - AGENT_ID=novisec-agent-001
       - API_URL=http://api:3001

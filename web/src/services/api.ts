@@ -57,6 +57,20 @@ export const api = {
       body: JSON.stringify(payload)
     });
   },
+  async login(username: string, password: string, otp?: string): Promise<{ token: string; expiresIn: string }> {
+    const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, otp })
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(body || `${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  },
   saveConnectionSettings(apiUrl: string, token: string): void {
     if (typeof window === "undefined") {
       return;
