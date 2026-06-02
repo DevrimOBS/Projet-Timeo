@@ -6,7 +6,7 @@ import Reports from "./pages/Reports";
 import Vulnerabilities from "./pages/Vulnerabilities";
 import Login from "./components/Login";
 import { api } from "./services/api";
-import { ContainerDetails, MatrixData, OverviewData, ScanTask } from "./types";
+import { ContainerDetails, ContainerSummary, MatrixData, OverviewData, ScanTask } from "./types";
 import "./styles.css";
 
 type Tab = "overview" | "containers" | "vulnerabilities" | "reports";
@@ -15,7 +15,8 @@ function App() {
 	const [overview, setOverview] = useState<OverviewData | null>(null);
 	const [matrix, setMatrix] = useState<MatrixData | null>(null);
 	const [tasks, setTasks] = useState<ScanTask[]>([]);
-	const [selectedContainerId, setSelectedContainerId] = useState("redis");
+	const [containers, setContainers] = useState<ContainerSummary[]>([]);
+	const [selectedContainerId, setSelectedContainerId] = useState("");
 	const [details, setDetails] = useState<ContainerDetails | null>(null);
 	const [activeTab, setActiveTab] = useState<Tab>("overview");
 	const [loading, setLoading] = useState(true);
@@ -28,17 +29,30 @@ function App() {
 		setLoading(true);
 		setError(null);
 		try {
-			const [nextOverview, nextMatrix, nextTasks, nextDetails] = await Promise.all([
+			const [nextOverview, nextMatrix, nextTasks, nextContainers] = await Promise.all([
 				api.overview(),
 				api.matrix(),
 				api.listTasks(),
-				api.containerDetails(containerId)
+				api.containers()
 			]);
 
 			setOverview(nextOverview);
 			setMatrix(nextMatrix);
 			setTasks(nextTasks);
-			setDetails(nextDetails);
+			setContainers(nextContainers);
+
+			const nextContainerId =
+				containerId && nextContainers.some((container) => container.containerId === containerId)
+					? containerId
+					: nextContainers[0]?.containerId ?? "";
+
+			setSelectedContainerId(nextContainerId);
+
+			if (nextContainerId) {
+				setDetails(await api.containerDetails(nextContainerId));
+			} else {
+				setDetails(null);
+			}
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : "Erreur inattendue");
 		} finally {
@@ -71,7 +85,7 @@ function App() {
 				<div className="connection-panel glass-card">
 					<label>
 						API URL
-						<input value={apiUrl} onChange={(event) => setApiUrl(event.target.value)} placeholder="http://localhost:3000" />
+						<input value={apiUrl} onChange={(event) => setApiUrl(event.target.value)} placeholder="https://localhost:3002" />
 					</label>
 					<label>
 						Bearer token
@@ -113,6 +127,7 @@ function App() {
 			{activeTab === "overview" ? <Overview overview={overview} matrix={matrix} loading={loading} /> : null}
 			{activeTab === "containers" ? (
 				<Containers
+					containers={containers}
 					details={details}
 					loading={loading}
 					onSelect={(containerId) => {

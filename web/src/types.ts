@@ -36,6 +36,14 @@ export interface ContainerDetails {
   vulnerabilities: VulnerabilityItem[];
 }
 
+export interface ContainerSummary {
+  containerId: string;
+  name: string;
+  image: string;
+  status: string;
+  vulnerabilitiesCount: number;
+}
+
 export interface ScanTask {
   id: string;
   mode: string;

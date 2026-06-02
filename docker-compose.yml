@@ -3,11 +3,16 @@ services:
     build: ./agent
     container_name: novisec-agent
     read_only: true
+    env_file:
+      - .env
+    tmpfs:
+      - /tmp
     environment:
       - AGENT_ID=novisec-agent-001
       - API_URL=http://api:3001
-      - API_TOKEN=agent-dev-token
+      - API_TOKEN=${AGENT_TOKEN}
       - TRIVY_ENABLED=true
+      - TRIVY_CACHE_DIR=/tmp/trivy-cache
       - SCAN_TYPE=MANUAL_GLOBAL
     volumes:
       # Accès au socket Docker en lecture seule selon le CDC (4.2)
@@ -23,27 +28,29 @@ services:
     ports:
       - "3000:3001"
       - "3002:3002"
+    env_file:
+      - .env
     environment:
       - PORT=3001
       - POSTGRES_HOST=db
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=novisec
-      - POSTGRES_PASSWORD=novisec_secure_pass
-      - POSTGRES_DB=novisec_db
-      - ADMIN_TOKEN=admin-dev-token
-      - VIEWER_TOKEN=viewer-dev-token
-      - AGENT_TOKEN=agent-dev-token
-      - ADMIN_USER=admin
-      - ADMIN_PASSWORD=admin-pass
-      - VIEWER_USER=viewer
-      - VIEWER_PASSWORD=viewer-pass
-      - AGENT_USER=agent
-      - AGENT_PASSWORD=agent-pass
-      - AUTH_JWT_SECRET=change-me-in-prod
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - VIEWER_TOKEN=${VIEWER_TOKEN}
+      - AGENT_TOKEN=${AGENT_TOKEN}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - VIEWER_USER=${VIEWER_USER}
+      - VIEWER_PASSWORD=${VIEWER_PASSWORD}
+      - AGENT_USER=${AGENT_USER}
+      - AGENT_PASSWORD=${AGENT_PASSWORD}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET}
       - AUTH_JWT_EXPIRES_IN=8h
       - HTTPS_ENABLED=true
       - HTTPS_PFX_FILE=/certs/server.pfx
-      - HTTPS_PFX_PASSPHRASE=novisec-secure-pass
+      - HTTPS_PFX_PASSPHRASE=${HTTPS_PFX_PASSPHRASE}
     depends_on:
       - db
     networks:
@@ -65,9 +72,9 @@ services:
     image: postgres:16-alpine # PostgreSQL selon le CDC (4.1)
     container_name: novisec-db
     environment:
-      - POSTGRES_USER=novisec
-      - POSTGRES_PASSWORD=novisec_secure_pass
-      - POSTGRES_DB=novisec_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./database/schema:/docker-entrypoint-initdb.d:ro

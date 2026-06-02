@@ -1,17 +1,16 @@
-import { ContainerDetails } from "../types";
+import { ContainerDetails, ContainerSummary } from "../types";
 
 interface Props {
+  containers: ContainerSummary[];
   details: ContainerDetails | null;
   loading: boolean;
   onSelect: (containerId: string) => void;
   selectedContainerId: string;
 }
 
-const sampleContainers = ["redis", "api", "postgres", "web"];
-
-export default function Containers({ details, loading, onSelect, selectedContainerId }: Props) {
+export default function Containers({ containers, details, loading, onSelect, selectedContainerId }: Props) {
   return (
-    <section className="panel split-grid">
+    <section className="panel split-grid containers-grid">
       <div className="glass-card stack">
         <div className="section-heading">
           <div>
@@ -22,14 +21,18 @@ export default function Containers({ details, loading, onSelect, selectedContain
         </div>
 
         <div className="chip-row">
-          {sampleContainers.map((containerId) => (
+          {containers.length === 0 ? (
+            <p className="muted">Aucun conteneur disponible. Lance un scan pour alimenter le dashboard.</p>
+          ) : null}
+
+          {containers.map((container) => (
             <button
-              key={containerId}
-              className={`chip ${selectedContainerId === containerId ? "chip-active" : ""}`}
-              onClick={() => onSelect(containerId)}
+              key={container.containerId}
+              className={`chip ${selectedContainerId === container.containerId ? "chip-active" : ""}`}
+              onClick={() => onSelect(container.containerId)}
               type="button"
             >
-              {containerId}
+              {container.name}
             </button>
           ))}
         </div>
@@ -63,8 +66,8 @@ export default function Containers({ details, loading, onSelect, selectedContain
           {!details || details.vulnerabilities.length === 0 ? (
             <p className="muted">Aucune vulnérabilité remontée pour la sélection actuelle.</p>
           ) : (
-            details.vulnerabilities.map((vuln) => (
-              <article key={`${vuln.cve}-${vuln.package_name}`} className="vuln-card">
+            details.vulnerabilities.map((vuln, index) => (
+              <article key={`${vuln.cve}-${vuln.package_name}-${index}`} className="vuln-card">
                 <div className="vuln-top">
                   <strong>{vuln.cve}</strong>
                   <span className={`severity severity-${String(vuln.severity).toLowerCase()}`}>{vuln.severity}</span>

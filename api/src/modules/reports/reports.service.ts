@@ -90,6 +90,42 @@ export class ReportsService {
     return matrix;
   }
 
+  async getContainers() {
+    const latestScan = await this.db.query<{ id: string }>(
+      `SELECT id FROM scans ORDER BY finished_at DESC LIMIT 1`
+    );
+
+    if (latestScan.rows.length === 0) {
+      return [];
+    }
+
+    const result = await this.db.query<{
+      containerId: string;
+      name: string;
+      image: string;
+      status: string;
+      vulnerabilitiesCount: string;
+    }>(
+      `SELECT
+         c.container_id AS "containerId",
+         c.name,
+         c.image,
+         c.status,
+         COUNT(v.id)::text AS "vulnerabilitiesCount"
+       FROM scan_containers c
+       LEFT JOIN vulnerabilities v ON v.container_row_id = c.id
+       WHERE c.scan_id = $1
+       GROUP BY c.id
+       ORDER BY c.name ASC`,
+      [latestScan.rows[0].id]
+    );
+
+    return result.rows.map((container) => ({
+      ...container,
+      vulnerabilitiesCount: Number(container.vulnerabilitiesCount)
+    }));
+  }
+
   async getContainerDetails(containerId: string) {
     const containers = await this.db.query<{
       scan_id: string;

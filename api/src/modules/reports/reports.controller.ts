@@ -21,6 +21,11 @@ export class ReportsController {
     return this.reportsService.getMatrix();
   }
 
+  @Get("containers")
+  getContainers() {
+    return this.reportsService.getContainers();
+  }
+
   @Get("details/:containerId")
   getContainerDetails(@Param("containerId") containerId: string) {
     return this.reportsService.getContainerDetails(containerId);

@@ -4,11 +4,15 @@ import { AppModule } from "./app.module";
 import 'reflect-metadata';
 import * as fs from 'fs';
 import * as https from 'https';
+import * as express from "express";
 
 async function bootstrap(): Promise<void> {
-	const app = await NestFactory.create(AppModule);
+	const app = await NestFactory.create(AppModule, { bodyParser: false });
+	const bodyLimit = process.env.API_BODY_LIMIT ?? "10mb";
 
 	app.enableCors({ origin: process.env.CORS_ORIGIN ?? "*" });
+	app.use(express.json({ limit: bodyLimit }));
+	app.use(express.urlencoded({ extended: true, limit: bodyLimit }));
 	app.useGlobalPipes(
 		new ValidationPipe({
 			whitelist: true,
@@ -51,8 +55,10 @@ async function bootstrap(): Promise<void> {
 		}
 
 		await app.listen(port, '0.0.0.0');
-		const server = https.createServer(httpsOptions, app.getHttpServer());
-		server.listen(port + 1, () => {
+		const httpAdapter = app.getHttpAdapter().getInstance();
+		const expressApp = httpAdapter.getInstance();
+		const server = https.createServer(httpsOptions, expressApp);
+		server.listen(port + 1, '0.0.0.0', () => {
 			console.log(`🔒 HTTPS server running on https://localhost:${port + 1}`);
 		});
 		console.log(`✅ HTTP server running on http://localhost:${port}`);

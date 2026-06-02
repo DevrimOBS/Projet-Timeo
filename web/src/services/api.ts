@@ -1,6 +1,6 @@
-import { ContainerDetails, CreateScanTaskPayload, MatrixData, OverviewData, ScanTask } from "../types";
+import { ContainerDetails, ContainerSummary, CreateScanTaskPayload, MatrixData, OverviewData, ScanTask } from "../types";
 
-const fallbackApiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+const fallbackApiUrl = import.meta.env.VITE_API_URL ?? "https://localhost:3002";
 
 function getApiBaseUrl(): string {
   if (typeof window === "undefined") {
@@ -44,6 +44,9 @@ export const api = {
   },
   async matrix(): Promise<MatrixData> {
     return request<MatrixData>("/api/reports/matrix");
+  },
+  async containers(): Promise<ContainerSummary[]> {
+    return request<ContainerSummary[]>("/api/reports/containers");
   },
   async containerDetails(containerId: string): Promise<ContainerDetails> {
     return request<ContainerDetails>(`/api/reports/details/${encodeURIComponent(containerId)}`);
