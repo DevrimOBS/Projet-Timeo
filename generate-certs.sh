@@ -1,44 +1,65 @@
 #!/bin/bash
-# Generate self-signed certificates for TLS/HTTPS
+set -euo pipefail
 
-CERT_DIR="./certs"
-DAYS=365
+# Generate a local CA and a server certificate for TLS/HTTPS.
 
-# Create certs directory if it doesn't exist
+CERT_DIR="${1:-./certs}"
+DAYS="${DAYS:-365}"
+PFX_PASSWORD="${PFX_PASSWORD:-novisec-secure-pass}"
+
 mkdir -p "$CERT_DIR"
 
-echo "Generating self-signed TLS certificates..."
+echo "Generating local TLS certificates in $CERT_DIR..."
 
-# Generate private key
+openssl genrsa -out "$CERT_DIR/ca.key" 4096
+openssl req -x509 -new -nodes \
+  -key "$CERT_DIR/ca.key" \
+  -sha256 \
+  -days "$DAYS" \
+  -out "$CERT_DIR/ca.crt" \
+  -subj "/C=FR/ST=IDF/L=Paris/O=NoviSec/CN=NoviSec Local CA"
+
 openssl genrsa -out "$CERT_DIR/server.key" 2048
-
-# Generate certificate signing request
 openssl req -new \
   -key "$CERT_DIR/server.key" \
   -out "$CERT_DIR/server.csr" \
-  -subj "/C=FR/ST=IDF/L=Paris/O=NoviSec/CN=localhost"
+  -subj "/C=FR/ST=IDF/L=Paris/O=NoviSec/CN=api"
 
-# Generate self-signed certificate
-openssl x509 -req -days "$DAYS" \
+cat > "$CERT_DIR/server.ext" <<EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage=digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+subjectAltName=DNS:api,DNS:localhost,DNS:*.novisec.local,IP:127.0.0.1
+EOF
+
+openssl x509 -req \
   -in "$CERT_DIR/server.csr" \
-  -signkey "$CERT_DIR/server.key" \
-  -out "$CERT_DIR/server.crt" \
-  -extfile <(printf "subjectAltName=DNS:localhost,DNS:*.novisec.local,IP:127.0.0.1")
+  -CA "$CERT_DIR/ca.crt" \
+  -CAkey "$CERT_DIR/ca.key" \
+  -CAcreateserial \
+  -days "$DAYS" \
+  -sha256 \
+  -extfile "$CERT_DIR/server.ext" \
+  -out "$CERT_DIR/server.crt"
 
-# Create PKCS12 format for Java/Node (optional)
-openssl pkcs12 -export -in "$CERT_DIR/server.crt" \
+openssl pkcs12 -export \
+  -in "$CERT_DIR/server.crt" \
   -inkey "$CERT_DIR/server.key" \
-  -out "$CERT_DIR/server.p12" \
+  -certfile "$CERT_DIR/ca.crt" \
+  -out "$CERT_DIR/server.pfx" \
   -name novisec-server \
-  -passout pass:novisec-secure-pass
+  -passout pass:"$PFX_PASSWORD"
 
-# Display info
+rm -f "$CERT_DIR/server.csr" "$CERT_DIR/server.ext" "$CERT_DIR/ca.srl"
+chmod 640 "$CERT_DIR"/*.key "$CERT_DIR"/*.crt "$CERT_DIR"/server.pfx
+
 echo ""
-echo "✅ Certificates generated in $CERT_DIR:"
-echo "  - server.key   (private key)"
-echo "  - server.crt   (certificate)"
-echo "  - server.p12   (PKCS12 format)"
+echo "Certificates generated:"
+echo "  - $CERT_DIR/ca.crt"
+echo "  - $CERT_DIR/ca.key"
+echo "  - $CERT_DIR/server.crt"
+echo "  - $CERT_DIR/server.key"
+echo "  - $CERT_DIR/server.pfx"
 echo ""
-echo "Valid for $DAYS days"
-echo ""
-echo "To use in production, replace with real certificates from a CA."
+echo "The server certificate is valid for localhost, 127.0.0.1, api, and *.novisec.local."

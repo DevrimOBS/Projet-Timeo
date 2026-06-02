@@ -61,13 +61,13 @@ openssl version
 │  │  ┌──────────────────────────────────────────────┐    │   │
 │  │  │ Agent Container (Read-Only)                 │    │   │
 │  │  │ - Scanne via docker.sock (:ro)              │    │   │
-│  │  │ - Envoie rapports à https://api:3001        │    │   │
+│  │  │ - Envoie rapports à https://api:3002        │    │   │
 │  │  └──────────────────────────────────────────────┘    │   │
 │  │                                                       │   │
 │  │  ┌──────────────────────────────────────────────┐    │   │
 │  │  │ Frontend Container (React)                  │    │   │
 │  │  │ - Serveur statique nginx ou vite dev        │    │   │
-│  │  │ - Parle à https://api:3001 en interne       │    │   │
+│  │  │ - Parle à https://api:3002 en interne       │    │   │
 │  │  └──────────────────────────────────────────────┘    │   │
 │  │                                                       │   │
 │  └───────────────────────────────────────────────────────┘   │
@@ -180,7 +180,7 @@ AUDIT_LOG_PATH=/var/log/novisec/audit.log
 
 # Agent
 AGENT_ID=novisec-agent-prod-001
-API_URL=https://api:3001
+API_URL=https://api:3002
 API_TOKEN=<SAME_AS_AGENT_TOKEN>
 TRIVY_ENABLED=true
 SCAN_TYPE=MANUAL_GLOBAL

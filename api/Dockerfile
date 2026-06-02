@@ -4,5 +4,5 @@ COPY package*.json ./
 RUN npm install
 COPY tsconfig.json ./
 COPY src ./src
-EXPOSE 3001
+EXPOSE 3001 3002
 CMD ["npm", "run", "dev"]

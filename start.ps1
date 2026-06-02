@@ -29,8 +29,8 @@ try {
     
     while ($attempt -lt $maxAttempts) {
         try {
-            $response = Invoke-WebRequest -Uri http://localhost:5173 -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
-            if ($response.StatusCode -eq 200) {
+            $statusCode = curl.exe -k -s -o NUL -w "%{http_code}" https://localhost:5173
+            if ($statusCode -eq "200") {
                 $frontendReady = $true
                 break
             }
@@ -52,11 +52,12 @@ try {
         Write-Host "[3/3] Opening browser..." -ForegroundColor Cyan
         
         # Open browser
-        Start-Process "http://localhost:5173"
+        Start-Process "https://localhost:5173"
         
         Write-Host ""
-        Write-Host "[INFO] Dashboard:      http://localhost:5173" -ForegroundColor Green
-        Write-Host "[INFO] API:            http://localhost:3000" -ForegroundColor Green
+        Write-Host "[INFO] Dashboard:      https://localhost:5173" -ForegroundColor Green
+        Write-Host "[INFO] API HTTPS:      https://localhost:3002" -ForegroundColor Green
+        Write-Host "[INFO] API HTTP:       http://localhost:3000" -ForegroundColor Green
         Write-Host "[INFO] Database:       localhost:5432" -ForegroundColor Green
         Write-Host ""
         Write-Host "[INFO] Press Ctrl+C to stop services..." -ForegroundColor Yellow

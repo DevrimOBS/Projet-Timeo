@@ -3,7 +3,6 @@ package transport
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,19 +19,15 @@ type TaskActionPayload struct {
 	Message string `json:"message,omitempty"`
 }
 
-func ClaimTask(ctx context.Context, endpoint, token string, timeout time.Duration, insecureSkipTLSVerify bool) (*models.ScanTask, error) {
+func ClaimTask(ctx context.Context, endpoint, token string, timeout time.Duration, insecureSkipTLSVerify bool, caCertFile string) (*models.ScanTask, error) {
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {
 		return nil, nil
 	}
 
-	client := &http.Client{Timeout: timeout}
-	if strings.HasPrefix(endpoint, "https://") {
-		transport := &http.Transport{TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13}}
-		if insecureSkipTLSVerify {
-			transport.TLSClientConfig.InsecureSkipVerify = true
-		}
-		client.Transport = transport
+	client, err := newHTTPClient(endpoint, timeout, insecureSkipTLSVerify, caCertFile)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
@@ -72,7 +67,7 @@ func ClaimTask(ctx context.Context, endpoint, token string, timeout time.Duratio
 	return &task, nil
 }
 
-func CompleteTask(ctx context.Context, endpoint, token string, timeout time.Duration, insecureSkipTLSVerify bool, payload TaskActionPayload) error {
+func CompleteTask(ctx context.Context, endpoint, token string, timeout time.Duration, insecureSkipTLSVerify bool, caCertFile string, payload TaskActionPayload) error {
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {
 		return nil
@@ -83,13 +78,9 @@ func CompleteTask(ctx context.Context, endpoint, token string, timeout time.Dura
 		return err
 	}
 
-	client := &http.Client{Timeout: timeout}
-	if strings.HasPrefix(endpoint, "https://") {
-		transport := &http.Transport{TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13}}
-		if insecureSkipTLSVerify {
-			transport.TLSClientConfig.InsecureSkipVerify = true
-		}
-		client.Transport = transport
+	client, err := newHTTPClient(endpoint, timeout, insecureSkipTLSVerify, caCertFile)
+	if err != nil {
+		return err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))

@@ -35,9 +35,9 @@ func main() {
 	var task *models.ScanTask
 	var err error
 	backoff := 1 * time.Second
-	claimLoop:
+claimLoop:
 	for {
-		task, err = transport.ClaimTask(ctx, cfg.TaskClaimEndpoint(), cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify)
+		task, err = transport.ClaimTask(ctx, cfg.TaskClaimEndpoint(), cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify, cfg.APICACertFile)
 		if err == nil {
 			break
 		}
@@ -120,13 +120,13 @@ func main() {
 		Summary:    summarize(reports),
 	}
 
-	scanID, err := transport.SendReport(ctx, cfg.Endpoint(), report, cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify)
+	scanID, err := transport.SendReport(ctx, cfg.Endpoint(), report, cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify, cfg.APICACertFile)
 	if err != nil {
 		log.Fatalf("report send error: %v", err)
 	}
 
 	if task != nil {
-		if err := transport.CompleteTask(ctx, cfg.TaskCompleteEndpoint(task.ID), cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify, transport.TaskActionPayload{ScanID: scanID, Status: "completed"}); err != nil {
+		if err := transport.CompleteTask(ctx, cfg.TaskCompleteEndpoint(task.ID), cfg.APIToken, cfg.RequestTimeout, cfg.InsecureSkipTLSVerify, cfg.APICACertFile, transport.TaskActionPayload{ScanID: scanID, Status: "completed"}); err != nil {
 			log.Printf("task completion error: %v", err)
 		}
 	}

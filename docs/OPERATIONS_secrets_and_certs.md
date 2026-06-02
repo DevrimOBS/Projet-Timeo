@@ -1,57 +1,111 @@
 # Rotation des certificats TLS et gestion des secrets
 
-Objectif : procédures courtes et reproductibles pour la rotation des certificats HTTPS et des secrets (JWT, mots de passe, tokens) en production.
+Objectif : procedures courtes et reproductibles pour la rotation des certificats HTTPS et des secrets en production.
 
-Principes généraux
-- Ne jamais committer les certificats privés, clés ou fichiers `.env` dans le dépôt (ils sont déjà ignorés dans `.gitignore`).
-- Stocker les secrets dans un coffre (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) pour les environnements prod.
-- Automatiser la rotation (cron ou pipeline CI/CD) et documenter la fenêtre de maintenance.
+## TLS local avec Docker Compose
 
-Rotation d'un certificat HTTPS (procédure rapide)
-1. Générer/obtenir le nouveau couple clé/certificat (ex. via votre CA ou `generate-certs.sh`).
+La stack Docker locale utilise :
 
-Exemple local rapide :
-```bash
-# génère server.key et server.crt dans ./certs
-./generate-certs.sh --output ./certs
+- API HTTP interne/exposee : `http://localhost:3000` vers le port container `3001`
+- API HTTPS : `https://localhost:3002` vers le port container `3002`
+- Agent vers API : `https://api:3002`
+- CA agent : `/certs/ca.crt`
+
+Le dossier `./certs` est monte en lecture seule dans `api` et `agent`.
+
+## Generer les certificats locaux
+
+Windows PowerShell :
+
+```powershell
+.\generate-certs.ps1
 ```
 
-2. Vérifier les fichiers et permissions :
+Linux/macOS/Git Bash :
+
 ```bash
-ls -l certs/server.*
-chmod 640 certs/server.key
-chown root:root certs/server.*
+./generate-certs.sh
 ```
 
-3. Déployer le certificat dans le chemin attendu par le container API (`./certs` monté en `:ro` dans `docker-compose.yml`).
+Les scripts generent :
 
-4. Redémarrer uniquement le service API pour prise en compte :
+- `certs/ca.crt` : certificat de CA locale a faire confiance cote client
+- `certs/ca.key` : cle privee de CA, a proteger
+- `certs/server.crt` : certificat serveur API
+- `certs/server.key` : cle privee serveur API
+- `certs/server.pfx` : format PKCS12 optionnel, mot de passe `novisec-secure-pass`
+
+Le certificat serveur est valide pour `localhost`, `127.0.0.1`, `api` et `*.novisec.local`.
+
+## Activer TLS dans Compose
+
+Les variables attendues dans `docker-compose.yml` sont :
+
+```yaml
+api:
+  environment:
+    - HTTPS_ENABLED=true
+    - HTTPS_KEY_FILE=/certs/server.key
+    - HTTPS_CERT_FILE=/certs/server.crt
+  volumes:
+    - ./certs:/certs:ro
+
+agent:
+  environment:
+    - API_URL=https://api:3002
+    - API_CA_CERT_FILE=/certs/ca.crt
+    - INSECURE_SKIP_TLS_VERIFY=false
+  volumes:
+    - ./certs:/certs:ro
+
+frontend:
+  environment:
+    - VITE_API_URL=https://localhost:3002
+```
+
+## Rotation d'un certificat HTTPS
+
+1. Generer ou obtenir le nouveau couple cle/certificat.
+
+```bash
+./generate-certs.sh
+```
+
+2. Verifier les fichiers :
+
+```bash
+ls -l certs/ca.crt certs/server.crt certs/server.key
+```
+
+3. Redemarrer les services qui lisent les certificats :
+
+```bash
+docker compose up -d --no-deps --force-recreate api agent frontend
+```
+
+4. Valider HTTPS :
+
+```bash
+curl --cacert certs/ca.crt --tlsv1.3 https://localhost:3002/api/reports/overview \
+  -H "Authorization: Bearer admin-dev-token"
+```
+
+Dans un navigateur, importer `certs/ca.crt` comme autorite locale si le certificat auto-signe n'est pas accepte.
+
+## Rotation du secret JWT / mots de passe
+
+1. Preparer le nouveau secret dans le coffre ou dans un `.env` temporaire non committe.
+2. Mettre a jour `AUTH_JWT_SECRET` pour le service `api`.
+3. Revoquer ou expirer les tokens si necessaire.
+4. Redemarrer l'API :
+
 ```bash
 docker compose up -d --no-deps --force-recreate api
 ```
 
-5. Valider HTTPS :
-```bash
-curl -v --tlsv1.3 https://localhost:3002  # ou l'URL exposée
-```
+## Recommandations operationnelles
 
-Rotation du secret JWT / mots de passe
-1. Préparer le nouveau secret dans le coffre ou `.env` temporaire (ne pas committer).
-2. Mettre à jour la variable d'environnement `AUTH_JWT_SECRET` pour le service `api` (dans le déploiement orchestré via secret store ou CI/CD).
-3. Révoquer/expirer les tokens si nécessaire (implémenter token blacklisting ou diminuer `AUTH_JWT_EXPIRES_IN` temporairement).
-4. Redémarrer le service API :
-```bash
-docker compose up -d --no-deps --force-recreate api
-```
-
-Recommandations opérationnelles
-- Automatiser la mise à jour via pipeline CI (récupérer secrets depuis coffre, déployer, redémarrer service en rolling).
-- Maintenir une courte fenêtre d'expiration des tokens et prévoir un mécanisme de révocation pour incident.
-- Journaliser chaque rotation (source, opérateur, horaire, checksum du certificat) dans un fichier d'audit sécurisé.
-- Tester le processus dans un environnement staging avant prod.
-
-Annexes
-- Script d'aide : `generate-certs.sh` et `generate-certs.ps1` fournis au repo.
-- Fichier à protéger : `certs/server.key`, `certs/server.crt`, `.env*`.
-
-Fin.
+- Ne jamais committer les certificats prives, cles ou fichiers `.env`.
+- Stocker les secrets dans un coffre pour les environnements de production.
+- Utiliser une CA publique ou interne en production au lieu de la CA locale de developpement.
+- Journaliser chaque rotation avec l'operateur, l'heure et le checksum du certificat.

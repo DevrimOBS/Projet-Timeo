@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
 export interface JwtPayload {
   sub: string;
@@ -6,7 +6,7 @@ export interface JwtPayload {
 }
 
 const secret = process.env.AUTH_JWT_SECRET ?? 'dev_jwt_secret';
-const expiresIn = process.env.AUTH_JWT_EXPIRES_IN ?? '8h';
+const expiresIn = (process.env.AUTH_JWT_EXPIRES_IN ?? '8h') as SignOptions['expiresIn'];
 
 export function signToken(subject: string, role: string): string {
   const payload: JwtPayload = { sub: subject, role };

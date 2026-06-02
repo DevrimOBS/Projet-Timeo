@@ -24,13 +24,14 @@ type Config struct {
 	RequestTimeout        time.Duration
 	ScanTimeout           time.Duration
 	InsecureSkipTLSVerify bool
+	APICACertFile         string
 	ConfigFile            string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
 		AgentID:        "novisec-agent-001",
-		APIURL:         "http://api:3001",
+		APIURL:         "https://api:3002",
 		DockerSocket:   "/var/run/docker.sock",
 		TrivyPath:      "trivy",
 		TrivyEnabled:   true,
@@ -189,11 +190,17 @@ func applyValues(cfg *Config, values map[string]string) {
 			cfg.InsecureSkipTLSVerify = parsed
 		}
 	}
+	if v, ok := values["apicacertfile"]; ok && v != "" {
+		cfg.APICACertFile = v
+	}
 }
 
 func applyEnv(cfg *Config) {
 	if v := strings.TrimSpace(os.Getenv("AGENT_ID")); v != "" {
 		cfg.AgentID = v
+	}
+	if v := strings.TrimSpace(os.Getenv("AGENT_API_URL")); v != "" {
+		cfg.APIURL = v
 	}
 	if v := strings.TrimSpace(os.Getenv("API_URL")); v != "" {
 		cfg.APIURL = v
@@ -235,6 +242,9 @@ func applyEnv(cfg *Config) {
 		if parsed, err := strconv.ParseBool(v); err == nil {
 			cfg.InsecureSkipTLSVerify = parsed
 		}
+	}
+	if v := strings.TrimSpace(os.Getenv("API_CA_CERT_FILE")); v != "" {
+		cfg.APICACertFile = v
 	}
 }
 

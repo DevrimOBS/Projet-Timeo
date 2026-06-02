@@ -3,7 +3,6 @@ package transport
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,7 +14,7 @@ import (
 	"novisec-docker-auditor/agent/src/models"
 )
 
-func SendReport(ctx context.Context, endpoint string, report models.ScanReport, token string, timeout time.Duration, insecureSkipTLSVerify bool) (string, error) {
+func SendReport(ctx context.Context, endpoint string, report models.ScanReport, token string, timeout time.Duration, insecureSkipTLSVerify bool, caCertFile string) (string, error) {
 	endpoint = strings.TrimSpace(endpoint)
 	if endpoint == "" {
 		return "", fmt.Errorf("report endpoint is required")
@@ -41,19 +40,15 @@ func SendReport(ctx context.Context, endpoint string, report models.ScanReport, 
 				}
 			}
 			loginURL := strings.TrimRight(base, "/") + "/api/auth/login"
-			if tkn, err := fetchAuthToken(ctx, loginURL, user, pass, timeout, insecureSkipTLSVerify); err == nil && tkn != "" {
+			if tkn, err := fetchAuthToken(ctx, loginURL, user, pass, timeout, insecureSkipTLSVerify, caCertFile); err == nil && tkn != "" {
 				token = tkn
 			}
 		}
 	}
 
-	client := &http.Client{Timeout: timeout}
-	if strings.HasPrefix(endpoint, "https://") {
-		transport := &http.Transport{TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13}}
-		if insecureSkipTLSVerify {
-			transport.TLSClientConfig.InsecureSkipVerify = true
-		}
-		client.Transport = transport
+	client, err := newHTTPClient(endpoint, timeout, insecureSkipTLSVerify, caCertFile)
+	if err != nil {
+		return "", err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
@@ -86,17 +81,13 @@ func SendReport(ctx context.Context, endpoint string, report models.ScanReport, 
 	return response.ScanID, nil
 }
 
-func fetchAuthToken(ctx context.Context, loginURL, user, pass string, timeout time.Duration, insecureSkipTLSVerify bool) (string, error) {
+func fetchAuthToken(ctx context.Context, loginURL, user, pass string, timeout time.Duration, insecureSkipTLSVerify bool, caCertFile string) (string, error) {
 	payload := map[string]string{"username": user, "password": pass}
 	body, _ := json.Marshal(payload)
 
-	client := &http.Client{Timeout: timeout}
-	if strings.HasPrefix(loginURL, "https://") {
-		transport := &http.Transport{TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13}}
-		if insecureSkipTLSVerify {
-			transport.TLSClientConfig.InsecureSkipVerify = true
-		}
-		client.Transport = transport
+	client, err := newHTTPClient(loginURL, timeout, insecureSkipTLSVerify, caCertFile)
+	if err != nil {
+		return "", err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, loginURL, bytes.NewReader(body))

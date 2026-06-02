@@ -1,2 +1,4 @@
 agentId: novisec-agent-001
-apiUrl: http://api:3000
+apiUrl: https://api:3002
+apiCaCertFile: /certs/ca.crt
+insecureSkipTlsVerify: false
