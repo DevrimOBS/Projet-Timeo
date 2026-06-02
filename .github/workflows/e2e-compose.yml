@@ -22,8 +22,8 @@ jobs:
       - name: Force Trivy DB update (cve-updater)
         run: |
           # try exec then run
-          docker compose -f docker-compose.yml exec cve-updater trivy db update || \
-          docker compose -f docker-compose.yml run --rm cve-updater trivy db update || true
+          docker compose -f docker-compose.yml exec cve-updater trivy image --download-db-only --skip-java-db-update || \
+          docker compose -f docker-compose.yml run --rm cve-updater trivy image --download-db-only --skip-java-db-update || true
 
       - name: Wait for API to be ready
         run: |

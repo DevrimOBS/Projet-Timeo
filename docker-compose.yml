@@ -82,8 +82,10 @@ services:
     restart: unless-stopped
     networks:
       - novisec-net
-    entrypoint: ["sh", "-c"]
-    command: "while true; do trivy db update || true; sleep 21600; done"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - while true; do trivy image --download-db-only --skip-java-db-update || true; sleep 21600; done
 
 volumes:
   db-data:

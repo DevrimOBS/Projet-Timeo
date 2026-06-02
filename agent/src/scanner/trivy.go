@@ -96,7 +96,7 @@ func UpdateDB(ctx context.Context, trivyPath string) error {
 		return nil
 	}
 
-	cmd := exec.CommandContext(ctx, binary, "db", "update")
+	cmd := exec.CommandContext(ctx, binary, "image", "--download-db-only", "--skip-java-db-update")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("trivy db update failed: %v: %s", err, strings.TrimSpace(string(out)))
