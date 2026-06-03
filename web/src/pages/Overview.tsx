@@ -1,16 +1,38 @@
-import { MatrixData, OverviewData } from "../types";
+import { ContainerSeverityData, MatrixData, OverviewData } from "../types";
 
 interface Props {
   overview: OverviewData | null;
   matrix: MatrixData | null;
+  containerSeverityData: ContainerSeverityData[];
   loading: boolean;
 }
 
-export default function Overview({ overview, matrix, loading }: Props) {
+export default function Overview({ overview, matrix, containerSeverityData, loading }: Props) {
   const scansCount = overview?.scansCount ?? 0;
   const healthy = overview?.healthyContainers ?? 0;
   const vulnerable = overview?.vulnerableContainers ?? 0;
   const risk = overview?.globalRiskScore ?? 0;
+
+  const sortedContainerData = [...containerSeverityData].sort((a, b) => b.total - a.total);
+  const chartData = sortedContainerData;
+  const maxContainerTotal = Math.max(1, ...chartData.map((item) => item.total));
+
+  const totalBySeverity = sortedContainerData.reduce(
+    (acc, item) => {
+      acc.critical += item.critical;
+      acc.high += item.high;
+      acc.medium += item.medium;
+      acc.low += item.low;
+      return acc;
+    },
+    { critical: 0, high: 0, medium: 0, low: 0 }
+  );
+
+  const totalCve = totalBySeverity.critical + totalBySeverity.high + totalBySeverity.medium + totalBySeverity.low;
+
+  const criticalStop = totalCve > 0 ? (totalBySeverity.critical / totalCve) * 100 : 0;
+  const highStop = totalCve > 0 ? criticalStop + (totalBySeverity.high / totalCve) * 100 : criticalStop;
+  const mediumStop = totalCve > 0 ? highStop + (totalBySeverity.medium / totalCve) * 100 : highStop;
 
   const severityRows = [
     { key: "critical", label: "Critique", value: matrix?.critical ?? 0 },
@@ -53,24 +75,63 @@ export default function Overview({ overview, matrix, loading }: Props) {
           <div className="section-heading">
             <h2>Sessions</h2>
             <div className="chip-row">
-              <button className="chip chip-active" type="button">Hour</button>
-              <button className="chip" type="button">Day</button>
-              <button className="chip" type="button">Week</button>
+              <span className="chip chip-active">{chartData.length} conteneurs</span>
             </div>
           </div>
-          <svg viewBox="0 0 760 240" className="line-chart" role="img" aria-label="Évolution des sessions">
-            <polyline points="0,200 100,180 190,110 280,140 360,72 460,160 560,124 660,86 760,200" className="line line-current" />
-            <polyline points="0,206 110,140 210,150 300,162 410,110 500,88 610,174 760,206" className="line line-previous" />
-          </svg>
+          {loading ? (
+            <p className="muted">Chargement du graphique…</p>
+          ) : chartData.length === 0 ? (
+            <p className="muted">Aucune donnée de conteneur disponible pour afficher la répartition des criticités.</p>
+          ) : (
+            <>
+              <div className="bar-legend" aria-hidden="true">
+                <span><i className="legend-dot legend-critical" />Critical</span>
+                <span><i className="legend-dot legend-high" />High</span>
+                <span><i className="legend-dot legend-medium" />Medium</span>
+                <span><i className="legend-dot legend-low" />Low</span>
+              </div>
+
+              <div className="bar-chart-scroll">
+                <div className="bar-chart" role="img" aria-label="Nombre de vulnérabilités par criticité et par conteneur">
+                {chartData.map((item) => (
+                  <article key={item.containerId} className="bar-column">
+                    <div className="stacked-track" aria-hidden="true">
+                      <div
+                        className="stacked-bar"
+                        style={{ height: `${(item.total / maxContainerTotal) * 100}%` }}
+                        title={`Critical: ${item.critical} | High: ${item.high} | Medium: ${item.medium} | Low: ${item.low} | Total: ${item.total}`}
+                      >
+                        {item.low > 0 ? <span className="bar-segment bar-low" style={{ flexGrow: item.low }} /> : null}
+                        {item.medium > 0 ? <span className="bar-segment bar-medium" style={{ flexGrow: item.medium }} /> : null}
+                        {item.high > 0 ? <span className="bar-segment bar-high" style={{ flexGrow: item.high }} /> : null}
+                        {item.critical > 0 ? <span className="bar-segment bar-critical" style={{ flexGrow: item.critical }} /> : null}
+                      </div>
+                    </div>
+                    <p className="bar-container-name" title={item.name}>{item.name}</p>
+                    <p className="bar-total">Total: {item.total}</p>
+                  </article>
+                ))}
+                </div>
+              </div>
+            </>
+          )}
         </article>
 
         <article className="glass-card donut-card">
-          <h2>Users by device</h2>
-          <div className="donut-ring" aria-hidden="true" />
+          <h2>CVE by severity</h2>
+          <div
+            className="donut-ring"
+            aria-hidden="true"
+            style={{
+              background: `conic-gradient(var(--critical) 0 ${criticalStop}%, var(--high) ${criticalStop}% ${highStop}%, var(--medium) ${highStop}% ${mediumStop}%, var(--low) ${mediumStop}% 100%)`
+            }}
+          />
+          <p className="muted">Total CVE (tous conteneurs): {loading ? "..." : totalCve}</p>
           <div className="device-stats">
-            <p><span>Desktop</span><strong>68.3%</strong></p>
-            <p><span>Tablet</span><strong>24.2%</strong></p>
-            <p><span>Mobile</span><strong>7.5%</strong></p>
+            <p><span>CVE CRITICAL</span><strong>{loading ? "..." : totalBySeverity.critical}</strong></p>
+            <p><span>CVE HIGH</span><strong>{loading ? "..." : totalBySeverity.high}</strong></p>
+            <p><span>CVE MEDIUM</span><strong>{loading ? "..." : totalBySeverity.medium}</strong></p>
+            <p><span>CVE LOW</span><strong>{loading ? "..." : totalBySeverity.low}</strong></p>
           </div>
         </article>
       </div>

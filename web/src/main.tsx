@@ -6,7 +6,7 @@ import Reports from "./pages/Reports";
 import Vulnerabilities from "./pages/Vulnerabilities";
 import Login from "./components/Login";
 import { api } from "./services/api";
-import { ContainerDetails, ContainerSummary, MatrixData, OverviewData, ScanTask } from "./types";
+import { ContainerDetails, ContainerSeverityData, ContainerSummary, MatrixData, OverviewData, ScanTask } from "./types";
 import "./styles.css";
 
 type Tab = "overview" | "containers" | "vulnerabilities" | "reports";
@@ -16,6 +16,7 @@ function App() {
 	const [matrix, setMatrix] = useState<MatrixData | null>(null);
 	const [tasks, setTasks] = useState<ScanTask[]>([]);
 	const [containers, setContainers] = useState<ContainerSummary[]>([]);
+	const [containerSeverityData, setContainerSeverityData] = useState<ContainerSeverityData[]>([]);
 	const [selectedContainerId, setSelectedContainerId] = useState("");
 	const [details, setDetails] = useState<ContainerDetails | null>(null);
 	const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -41,6 +42,41 @@ function App() {
 			setTasks(nextTasks);
 			setContainers(nextContainers);
 
+			const detailsByContainer = new Map<string, ContainerDetails>();
+			const nextContainerSeverityData: ContainerSeverityData[] = [];
+
+			await Promise.all(
+				nextContainers.map(async (container) => {
+					const containerDetails = await api.containerDetails(container.containerId);
+					if (!containerDetails) {
+						return;
+					}
+
+					detailsByContainer.set(container.containerId, containerDetails);
+
+					const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+					for (const vuln of containerDetails.vulnerabilities) {
+						const severity = String(vuln.severity).toLowerCase();
+						if (severity === "critical" || severity === "high" || severity === "medium" || severity === "low") {
+							counts[severity] += 1;
+						}
+					}
+
+					nextContainerSeverityData.push({
+						containerId: container.containerId,
+						name: container.name,
+						critical: counts.critical,
+						high: counts.high,
+						medium: counts.medium,
+						low: counts.low,
+						total: counts.critical + counts.high + counts.medium + counts.low
+					});
+				})
+			);
+
+			nextContainerSeverityData.sort((a, b) => b.total - a.total);
+			setContainerSeverityData(nextContainerSeverityData);
+
 			const nextContainerId =
 				containerId && nextContainers.some((container) => container.containerId === containerId)
 					? containerId
@@ -49,7 +85,7 @@ function App() {
 			setSelectedContainerId(nextContainerId);
 
 			if (nextContainerId) {
-				setDetails(await api.containerDetails(nextContainerId));
+				setDetails(detailsByContainer.get(nextContainerId) ?? null);
 			} else {
 				setDetails(null);
 			}
@@ -160,7 +196,14 @@ function App() {
 				) : null}
 
 				<main className="content-area">
-					{activeTab === "overview" ? <Overview overview={overview} matrix={matrix} loading={loading} /> : null}
+					{activeTab === "overview" ? (
+						<Overview
+							overview={overview}
+							matrix={matrix}
+							containerSeverityData={containerSeverityData}
+							loading={loading}
+						/>
+					) : null}
 					{activeTab === "containers" ? (
 						<Containers
 							containers={containers}

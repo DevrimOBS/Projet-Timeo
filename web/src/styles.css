@@ -9,6 +9,10 @@
   --accent: #77d4ff;
   --accent-2: #8df0b5;
   --danger: #ff8f70;
+  --critical: #ff8f70;
+  --high: #ffd36e;
+  --medium: #77d4ff;
+  --low: #8df0b5;
   --shadow: 0 22px 56px rgba(0, 0, 0, 0.4);
   font-family: "Inter", "Segoe UI", "Aptos", sans-serif;
 }
@@ -366,6 +370,123 @@ textarea {
   opacity: 0.8;
 }
 
+.bar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.bar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.legend-critical {
+  background: var(--critical);
+}
+
+.legend-high {
+  background: var(--high);
+}
+
+.legend-medium {
+  background: var(--medium);
+}
+
+.legend-low {
+  background: var(--low);
+}
+
+.bar-chart-scroll {
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.bar-chart {
+  min-width: max-content;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 72px;
+  gap: 8px;
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  padding: 0 6px 10px;
+}
+
+.bar-column {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.stacked-track {
+  height: 180px;
+  display: flex;
+  align-items: end;
+}
+
+.stacked-bar {
+  width: 100%;
+  max-width: 30px;
+  margin-inline: auto;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column-reverse;
+  overflow: hidden;
+}
+
+.bar-segment {
+  display: block;
+  width: 100%;
+  min-height: 3px;
+}
+
+.bar-critical {
+  background: linear-gradient(180deg, #ffc2b1, var(--critical));
+}
+
+.bar-high {
+  background: linear-gradient(180deg, #ffe6a9, var(--high));
+}
+
+.bar-medium {
+  background: linear-gradient(180deg, #9fe5ff, var(--medium));
+}
+
+.bar-low {
+  background: linear-gradient(180deg, #b9f8d3, var(--low));
+}
+
+.bar-container-name {
+  margin: 2px 0 0;
+  font-size: 11px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-total {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -400,8 +521,7 @@ textarea {
   width: 188px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background:
-    conic-gradient(var(--accent) 0 68.3%, #67b6ff 68.3% 92.5%, var(--accent-2) 92.5% 100%);
+  background: conic-gradient(var(--critical) 0 25%, var(--high) 25% 50%, var(--medium) 50% 75%, var(--low) 75% 100%);
   position: relative;
 }
 

@@ -44,6 +44,16 @@ export interface ContainerSummary {
   vulnerabilitiesCount: number;
 }
 
+export interface ContainerSeverityData {
+  containerId: string;
+  name: string;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  total: number;
+}
+
 export interface ScanTask {
   id: string;
   mode: string;
