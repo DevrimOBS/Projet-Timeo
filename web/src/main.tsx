@@ -76,12 +76,61 @@ function App() {
 	}
 
 	return (
-		<div className="app-shell">
-			<header className="topbar">
-				<div>
+		<div className="dashboard-shell">
+			<aside className="sidebar glass-card">
+				<div className="brand-block">
 					<p className="eyebrow">NoviSec</p>
 					<h1>Docker Auditor</h1>
 				</div>
+
+				<div className="menu-group">
+					<p className="menu-title">Dashboards</p>
+					{[
+						["overview", "Analytics"],
+						["containers", "Containers"],
+						["vulnerabilities", "Vulnerabilities"],
+						["reports", "Reports"]
+					].map(([tab, label]) => (
+						<button
+							key={tab}
+							className={`menu-item ${activeTab === tab ? "menu-item-active" : ""}`}
+							onClick={() => setActiveTab(tab as Tab)}
+							type="button"
+						>
+							{label}
+						</button>
+					))}
+				</div>
+
+				<div className="menu-group">
+					<p className="menu-title">Layouts</p>
+					<button className="menu-item" type="button">Header Nav</button>
+					<button className="menu-item" type="button">Icon Sidebar</button>
+				</div>
+
+				<div className="menu-group">
+					<p className="menu-title">Templates</p>
+					<button className="menu-item" type="button">Transaction History</button>
+					<button className="menu-item" type="button">User Account</button>
+				</div>
+			</aside>
+
+			<div className="workspace-main">
+				<header className="topbar glass-card">
+					<label className="search-wrap" aria-label="Recherche">
+						<input type="search" placeholder="Search for containers, CVE, task..." />
+					</label>
+					<div className="topbar-actions">
+						<button className="icon-button" type="button" aria-label="Notifications">
+							<span className="notif-dot">2</span>
+						</button>
+						<button className="profile-pill" type="button">
+							<span className="avatar">SB</span>
+							<span>Security Admin</span>
+						</button>
+					</div>
+				</header>
+
 				<div className="connection-panel glass-card">
 					<label>
 						API URL
@@ -91,63 +140,52 @@ function App() {
 						Bearer token
 						<input value={token} onChange={(event) => setToken(event.target.value)} placeholder="admin-dev-token" />
 					</label>
-					<div style={{ display: "flex", gap: 8 }}>
+					<div className="connection-actions">
 						<button className="button" onClick={handleConnectionSave} type="button">
-							Sauvegarder et recharger
+							Sauvegarder
 						</button>
 						<button className="button button-secondary" onClick={() => setShowLogin(true)} type="button">
-							Se connecter
+							Connexion
 						</button>
 					</div>
 				</div>
-			</header>
 
-			<nav className="tabbar">
-				{[
-					["overview", "Vue d’ensemble"],
-					["containers", "Conteneurs"],
-					["vulnerabilities", "Vulnérabilités"],
-					["reports", "Tâches"]
-				].map(([tab, label]) => (
-					<button key={tab} className={`tab ${activeTab === tab ? "tab-active" : ""}`} onClick={() => setActiveTab(tab as Tab)} type="button">
-						{label}
-					</button>
-				))}
-			</nav>
+				{error ? <div className="banner error">{error}</div> : null}
 
-			{error ? <div className="banner error">{error}</div> : null}
+				{showLogin ? (
+					<Login
+						onClose={() => setShowLogin(false)}
+						onSuccess={(t) => handleLoginSuccess(t)}
+					/>
+				) : null}
 
-			{showLogin ? (
-				<Login
-					onClose={() => setShowLogin(false)}
-					onSuccess={(t) => handleLoginSuccess(t)}
-				/>
-			) : null}
-
-			{activeTab === "overview" ? <Overview overview={overview} matrix={matrix} loading={loading} /> : null}
-			{activeTab === "containers" ? (
-				<Containers
-					containers={containers}
-					details={details}
-					loading={loading}
-					onSelect={(containerId) => {
-						setSelectedContainerId(containerId);
-						void loadData(containerId);
-					}}
-					selectedContainerId={selectedContainerId}
-				/>
-			) : null}
-			{activeTab === "vulnerabilities" ? <Vulnerabilities matrix={matrix} /> : null}
-			{activeTab === "reports" ? (
-				<Reports
-					tasks={tasks}
-					loading={loading}
-					onRefresh={() => void loadData()}
-					onCreateTask={async (payload) => {
-						await api.createTask(payload);
-					}}
-				/>
-			) : null}
+				<main className="content-area">
+					{activeTab === "overview" ? <Overview overview={overview} matrix={matrix} loading={loading} /> : null}
+					{activeTab === "containers" ? (
+						<Containers
+							containers={containers}
+							details={details}
+							loading={loading}
+							onSelect={(containerId) => {
+								setSelectedContainerId(containerId);
+								void loadData(containerId);
+							}}
+							selectedContainerId={selectedContainerId}
+						/>
+					) : null}
+					{activeTab === "vulnerabilities" ? <Vulnerabilities matrix={matrix} /> : null}
+					{activeTab === "reports" ? (
+						<Reports
+							tasks={tasks}
+							loading={loading}
+							onRefresh={() => void loadData()}
+							onCreateTask={async (payload) => {
+								await api.createTask(payload);
+							}}
+						/>
+					) : null}
+				</main>
+			</div>
 		</div>
 	);
 }

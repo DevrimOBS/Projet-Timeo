@@ -6,6 +6,22 @@ import * as fs from 'fs';
 import * as https from 'https';
 import * as express from "express";
 
+function hasValidHttpsCertificate(): boolean {
+	const pfxPath = process.env.HTTPS_PFX_FILE;
+	const keyPath = process.env.HTTPS_KEY_FILE;
+	const certPath = process.env.HTTPS_CERT_FILE;
+
+	if (pfxPath) {
+		return fs.existsSync(pfxPath);
+	}
+
+	if (keyPath && certPath) {
+		return fs.existsSync(keyPath) && fs.existsSync(certPath);
+	}
+
+	return false;
+}
+
 async function bootstrap(): Promise<void> {
 	const app = await NestFactory.create(AppModule, { bodyParser: false });
 	const bodyLimit = process.env.API_BODY_LIMIT ?? "10mb";
@@ -27,6 +43,13 @@ async function bootstrap(): Promise<void> {
 	const useHttps = process.env.HTTPS_ENABLED === 'true';
 	
 	if (useHttps) {
+		if (!hasValidHttpsCertificate()) {
+			console.warn("⚠️ HTTPS requested but certificate files are missing. Falling back to HTTP.");
+			await app.listen(port, '0.0.0.0');
+			console.log(`✅ API server running on http://localhost:${port}`);
+			return;
+		}
+
 		const pfxPath = process.env.HTTPS_PFX_FILE;
 		const pfxPassword = process.env.HTTPS_PFX_PASSPHRASE;
 		const keyPath = process.env.HTTPS_KEY_FILE;
