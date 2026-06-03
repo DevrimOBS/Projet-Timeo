@@ -5,6 +5,8 @@ import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
   private readonly pool: Pool;
+  private readonly initMaxRetries: number;
+  private readonly initRetryDelayMs: number;
 
   constructor() {
     this.pool = new Pool({
@@ -14,10 +16,12 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       password: process.env.POSTGRES_PASSWORD ?? "postgres",
       database: process.env.POSTGRES_DB ?? "novisec"
     });
+    this.initMaxRetries = Number(process.env.DB_INIT_MAX_RETRIES ?? 20);
+    this.initRetryDelayMs = Number(process.env.DB_INIT_RETRY_DELAY_MS ?? 1500);
   }
 
   async onModuleInit(): Promise<void> {
-    await this.ensureSchema();
+    await this.ensureSchemaWithRetry();
     this.logger.log("PostgreSQL schema ready");
   }
 
@@ -121,5 +125,27 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     await this.query(`CREATE INDEX IF NOT EXISTS idx_scan_tasks_status_requested_at ON scan_tasks (status, requested_at);`);
     await this.query(`CREATE INDEX IF NOT EXISTS idx_scan_containers_scan_id ON scan_containers (scan_id);`);
     await this.query(`CREATE INDEX IF NOT EXISTS idx_vulnerabilities_container_row_id ON vulnerabilities (container_row_id);`);
+  }
+
+  private async ensureSchemaWithRetry(): Promise<void> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= this.initMaxRetries; attempt += 1) {
+      try {
+        await this.ensureSchema();
+        return;
+      } catch (error) {
+        lastError = error;
+        const isLastAttempt = attempt === this.initMaxRetries;
+        this.logger.warn(
+          `Database initialization attempt ${attempt}/${this.initMaxRetries} failed.${isLastAttempt ? "" : ` Retrying in ${this.initRetryDelayMs}ms...`}`
+        );
+        if (!isLastAttempt) {
+          await new Promise((resolve) => setTimeout(resolve, this.initRetryDelayMs));
+        }
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error("Database initialization failed");
   }
 }

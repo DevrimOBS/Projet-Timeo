@@ -64,7 +64,12 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_PROXY_TARGET=http://api:3001
+      - VITE_API_PROXY_TARGET=https://api:3002
+      - VITE_HTTPS_ENABLED=true
+      - VITE_HTTPS_KEY_FILE=/certs/server.key
+      - VITE_HTTPS_CERT_FILE=/certs/server.crt
+    volumes:
+      - ./certs:/certs:ro
     networks:
       - novisec-net
 

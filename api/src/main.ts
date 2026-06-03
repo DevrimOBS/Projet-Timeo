@@ -78,8 +78,7 @@ async function bootstrap(): Promise<void> {
 		}
 
 		await app.listen(port, '0.0.0.0');
-		const httpAdapter = app.getHttpAdapter().getInstance();
-		const expressApp = httpAdapter.getInstance();
+		const expressApp = app.getHttpAdapter().getInstance();
 		const server = https.createServer(httpsOptions, expressApp);
 		server.listen(port + 1, '0.0.0.0', () => {
 			console.log(`🔒 HTTPS server running on https://localhost:${port + 1}`);
