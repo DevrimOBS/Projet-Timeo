@@ -564,6 +564,10 @@ textarea {
   gap: 12px;
 }
 
+.bottom-grid-single {
+  grid-template-columns: 1fr;
+}
+
 .map-placeholder {
   margin-top: 10px;
   border: 1px solid var(--line);
@@ -675,6 +679,54 @@ textarea {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.vuln-container-row {
+  display: grid;
+  gap: 8px;
+}
+
+.vuln-container-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.vuln-container-head strong {
+  max-width: 55%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vuln-composition {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  display: flex;
+}
+
+.vuln-composition span {
+  height: 100%;
+}
+
+.comp-critical {
+  background: var(--critical);
+}
+
+.comp-high {
+  background: var(--high);
+}
+
+.comp-medium {
+  background: var(--medium);
+}
+
+.comp-low {
+  background: var(--low);
 }
 
 .modal-overlay {

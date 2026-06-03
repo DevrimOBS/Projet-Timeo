@@ -1,17 +1,18 @@
-import { ContainerSeverityData, MatrixData, OverviewData } from "../types";
+import { ContainerSeverityData, OverviewData } from "../types";
 
 interface Props {
   overview: OverviewData | null;
-  matrix: MatrixData | null;
   containerSeverityData: ContainerSeverityData[];
   loading: boolean;
 }
 
-export default function Overview({ overview, matrix, containerSeverityData, loading }: Props) {
+export default function Overview({ overview, containerSeverityData, loading }: Props) {
   const scansCount = overview?.scansCount ?? 0;
   const healthy = overview?.healthyContainers ?? 0;
   const vulnerable = overview?.vulnerableContainers ?? 0;
-  const risk = overview?.globalRiskScore ?? 0;
+  const rawRisk = overview?.globalRiskScore ?? 0;
+  const normalizedRisk = rawRisk > 10 ? rawRisk / 10 : rawRisk;
+  const normalizedRiskClamped = Math.min(10, Math.max(0, normalizedRisk));
 
   const sortedContainerData = [...containerSeverityData].sort((a, b) => b.total - a.total);
   const chartData = sortedContainerData;
@@ -29,23 +30,26 @@ export default function Overview({ overview, matrix, containerSeverityData, load
   );
 
   const totalCve = totalBySeverity.critical + totalBySeverity.high + totalBySeverity.medium + totalBySeverity.low;
+  const totalContainers = healthy + vulnerable;
+  const vulnerableRatio = totalContainers > 0 ? (vulnerable / totalContainers) * 100 : 0;
+  const avgCvePerVulnerableContainer = vulnerable > 0 ? totalCve / vulnerable : 0;
+  const mostExposedContainer = chartData[0] ?? null;
+  const dominantSeverity = [
+    { label: "Critical", value: totalBySeverity.critical },
+    { label: "High", value: totalBySeverity.high },
+    { label: "Medium", value: totalBySeverity.medium },
+    { label: "Low", value: totalBySeverity.low }
+  ].sort((a, b) => b.value - a.value)[0];
 
   const criticalStop = totalCve > 0 ? (totalBySeverity.critical / totalCve) * 100 : 0;
   const highStop = totalCve > 0 ? criticalStop + (totalBySeverity.high / totalCve) * 100 : criticalStop;
   const mediumStop = totalCve > 0 ? highStop + (totalBySeverity.medium / totalCve) * 100 : highStop;
 
-  const severityRows = [
-    { key: "critical", label: "Critique", value: matrix?.critical ?? 0 },
-    { key: "high", label: "Haute", value: matrix?.high ?? 0 },
-    { key: "medium", label: "Moyenne", value: matrix?.medium ?? 0 },
-    { key: "low", label: "Faible", value: matrix?.low ?? 0 }
-  ];
-
   const metricCards = [
-    { label: "Users", value: healthy, delta: "+12.4%" },
-    { label: "Sessions", value: scansCount, delta: "-7.2%" },
-    { label: "Vulnerable", value: vulnerable, delta: "+3.8%" },
-    { label: "Risk", value: `${risk.toFixed(1)} / 10`, delta: "+2.1%" }
+    { label: "Scans executes", value: scansCount },
+    { label: "Conteneurs sains", value: healthy },
+    { label: "Conteneurs vulnerables", value: vulnerable },
+    { label: "Risque global", value: `${normalizedRiskClamped.toFixed(1)} / 10` }
   ];
 
   return (
@@ -62,10 +66,8 @@ export default function Overview({ overview, matrix, containerSeverityData, load
           <article key={card.label} className="metric-card glass-card">
             <div className="metric-top">
               <span>{card.label}</span>
-              <small>{card.delta}</small>
             </div>
             <strong>{loading ? "..." : card.value}</strong>
-            <div className="sparkline" aria-hidden="true" />
           </article>
         ))}
       </div>
@@ -136,33 +138,31 @@ export default function Overview({ overview, matrix, containerSeverityData, load
         </article>
       </div>
 
-      <div className="bottom-grid">
+      <div className="bottom-grid bottom-grid-single">
         <article className="glass-card">
-          <h2>Top referrals</h2>
+          <h2>Insights scanner</h2>
           <div className="matrix-list">
-            <div className="matrix-row"><span>GitHub</span><strong>19,291</strong></div>
-            <div className="matrix-row"><span>Stack Overflow</span><strong>11,201</strong></div>
-            <div className="matrix-row"><span>Hacker News</span><strong>9,291</strong></div>
-            <div className="matrix-row"><span>TechCrunch</span><strong>6,218</strong></div>
+            <div className="matrix-row">
+              <span>Conteneur le plus expose</span>
+              <strong>{loading ? "..." : mostExposedContainer ? `${mostExposedContainer.name} (${mostExposedContainer.total})` : "Aucun"}</strong>
+            </div>
+            <div className="matrix-row">
+              <span>Taux de conteneurs vulnerables</span>
+              <strong>{loading ? "..." : `${vulnerableRatio.toFixed(1)}%`}</strong>
+            </div>
+            <div className="matrix-row">
+              <span>Moyenne CVE / conteneur vulnerable</span>
+              <strong>{loading ? "..." : avgCvePerVulnerableContainer.toFixed(1)}</strong>
+            </div>
+            <div className="matrix-row">
+              <span>Criticite dominante</span>
+              <strong>{loading ? "..." : `${dominantSeverity.label} (${dominantSeverity.value})`}</strong>
+            </div>
+            <div className="matrix-row">
+              <span>Risque global (pourcentage)</span>
+              <strong>{loading ? "..." : `${(normalizedRiskClamped * 10).toFixed(1)}%`}</strong>
+            </div>
           </div>
-        </article>
-
-        <article className="glass-card">
-          <h2>Goals overview</h2>
-          <div className="matrix-list">
-            {severityRows.map((item) => (
-              <div key={item.key} className="matrix-row">
-                <span>{item.label}</span>
-                <strong>{loading ? "..." : item.value}</strong>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="glass-card">
-          <h2>Users by country</h2>
-          <div className="map-placeholder" aria-hidden="true" />
-          <p className="muted">United States: 32.4%</p>
         </article>
       </div>
     </section>

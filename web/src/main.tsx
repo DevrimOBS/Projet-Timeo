@@ -122,7 +122,7 @@ function App() {
 				<div className="menu-group">
 					<p className="menu-title">Dashboards</p>
 					{[
-						["overview", "Analytics"],
+						["overview", "Vue globale"],
 						["containers", "Containers"],
 						["vulnerabilities", "Vulnerabilities"],
 						["reports", "Reports"]
@@ -137,33 +137,13 @@ function App() {
 						</button>
 					))}
 				</div>
-
-				<div className="menu-group">
-					<p className="menu-title">Layouts</p>
-					<button className="menu-item" type="button">Header Nav</button>
-					<button className="menu-item" type="button">Icon Sidebar</button>
-				</div>
-
-				<div className="menu-group">
-					<p className="menu-title">Templates</p>
-					<button className="menu-item" type="button">Transaction History</button>
-					<button className="menu-item" type="button">User Account</button>
-				</div>
 			</aside>
 
 			<div className="workspace-main">
 				<header className="topbar glass-card">
-					<label className="search-wrap" aria-label="Recherche">
-						<input type="search" placeholder="Search for containers, CVE, task..." />
-					</label>
-					<div className="topbar-actions">
-						<button className="icon-button" type="button" aria-label="Notifications">
-							<span className="notif-dot">2</span>
-						</button>
-						<button className="profile-pill" type="button">
-							<span className="avatar">SB</span>
-							<span>Security Admin</span>
-						</button>
+					<div>
+						<p className="eyebrow">Scanner</p>
+						<h2>Pilotage des scans Docker</h2>
 					</div>
 				</header>
 
@@ -199,7 +179,6 @@ function App() {
 					{activeTab === "overview" ? (
 						<Overview
 							overview={overview}
-							matrix={matrix}
 							containerSeverityData={containerSeverityData}
 							loading={loading}
 						/>
@@ -216,7 +195,13 @@ function App() {
 							selectedContainerId={selectedContainerId}
 						/>
 					) : null}
-					{activeTab === "vulnerabilities" ? <Vulnerabilities matrix={matrix} /> : null}
+					{activeTab === "vulnerabilities" ? (
+						<Vulnerabilities
+							matrix={matrix}
+							containerSeverityData={containerSeverityData}
+							loading={loading}
+						/>
+					) : null}
 					{activeTab === "reports" ? (
 						<Reports
 							tasks={tasks}
