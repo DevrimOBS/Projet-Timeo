@@ -29,6 +29,9 @@ let ReportsController = class ReportsController {
     getMatrix() {
         return this.reportsService.getMatrix();
     }
+    getContainers() {
+        return this.reportsService.getContainers();
+    }
     getContainerDetails(containerId) {
         return this.reportsService.getContainerDetails(containerId);
     }
@@ -46,6 +49,12 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ReportsController.prototype, "getMatrix", null);
+__decorate([
+    (0, common_1.Get)("containers"),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ReportsController.prototype, "getContainers", null);
 __decorate([
     (0, common_1.Get)("details/:containerId"),
     __param(0, (0, common_1.Param)("containerId")),

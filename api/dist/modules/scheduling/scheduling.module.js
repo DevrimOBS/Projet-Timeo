@@ -15,6 +15,7 @@ const roles_guard_1 = require("../../common/guards/roles.guard");
 const cve_updater_service_1 = require("./cve-updater.service");
 const scan_queue_controller_1 = require("./scan-queue.controller");
 const scan_queue_service_1 = require("./scan-queue.service");
+const scan_task_scheduler_service_1 = require("./scan-task-scheduler.service");
 let SchedulingModule = class SchedulingModule {
 };
 exports.SchedulingModule = SchedulingModule;
@@ -22,7 +23,7 @@ exports.SchedulingModule = SchedulingModule = __decorate([
     (0, common_1.Module)({
         imports: [database_module_1.DatabaseModule],
         controllers: [scan_queue_controller_1.ScanQueueController],
-        providers: [cve_updater_service_1.CveUpdaterService, scan_queue_service_1.ScanQueueService, core_1.Reflector, basic_auth_guard_1.BasicAuthGuard, roles_guard_1.RolesGuard],
+        providers: [cve_updater_service_1.CveUpdaterService, scan_queue_service_1.ScanQueueService, scan_task_scheduler_service_1.ScanTaskSchedulerService, core_1.Reflector, basic_auth_guard_1.BasicAuthGuard, roles_guard_1.RolesGuard],
         exports: [scan_queue_service_1.ScanQueueService]
     })
 ], SchedulingModule);

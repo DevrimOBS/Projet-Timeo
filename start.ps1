@@ -57,7 +57,6 @@ try {
         Write-Host ""
         Write-Host "[INFO] Dashboard:      https://localhost:5173" -ForegroundColor Green
         Write-Host "[INFO] API HTTPS:      https://localhost:3002" -ForegroundColor Green
-        Write-Host "[INFO] API HTTP:       http://localhost:3000" -ForegroundColor Green
         Write-Host "[INFO] Database:       localhost:5432" -ForegroundColor Green
         Write-Host ""
         Write-Host "[INFO] Press Ctrl+C to stop services..." -ForegroundColor Yellow

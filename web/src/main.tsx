@@ -6,7 +6,15 @@ import Reports from "./pages/Reports";
 import Vulnerabilities from "./pages/Vulnerabilities";
 import Login from "./components/Login";
 import { api } from "./services/api";
-import { ContainerDetails, ContainerSeverityData, ContainerSummary, MatrixData, OverviewData, ScanTask } from "./types";
+import {
+	ContainerDetails,
+	ContainerSeverityData,
+	ContainerSummary,
+	MatrixData,
+	OverviewData,
+	ScanSchedulerConfig,
+	ScanTask
+} from "./types";
 import "./styles.css";
 
 type Tab = "overview" | "containers" | "vulnerabilities" | "reports";
@@ -15,6 +23,7 @@ function App() {
 	const [overview, setOverview] = useState<OverviewData | null>(null);
 	const [matrix, setMatrix] = useState<MatrixData | null>(null);
 	const [tasks, setTasks] = useState<ScanTask[]>([]);
+	const [schedulerConfig, setSchedulerConfig] = useState<ScanSchedulerConfig | null>(null);
 	const [containers, setContainers] = useState<ContainerSummary[]>([]);
 	const [containerSeverityData, setContainerSeverityData] = useState<ContainerSeverityData[]>([]);
 	const [selectedContainerId, setSelectedContainerId] = useState("");
@@ -30,17 +39,19 @@ function App() {
 		setLoading(true);
 		setError(null);
 		try {
-			const [nextOverview, nextMatrix, nextTasks, nextContainers] = await Promise.all([
+			const [nextOverview, nextMatrix, nextTasks, nextContainers, nextSchedulerConfig] = await Promise.all([
 				api.overview(),
 				api.matrix(),
 				api.listTasks(),
-				api.containers()
+				api.containers(),
+				api.schedulerConfig()
 			]);
 
 			setOverview(nextOverview);
 			setMatrix(nextMatrix);
 			setTasks(nextTasks);
 			setContainers(nextContainers);
+			setSchedulerConfig(nextSchedulerConfig);
 
 			const detailsByContainer = new Map<string, ContainerDetails>();
 			const nextContainerSeverityData: ContainerSeverityData[] = [];
@@ -205,10 +216,18 @@ function App() {
 					{activeTab === "reports" ? (
 						<Reports
 							tasks={tasks}
+							schedulerConfig={schedulerConfig}
 							loading={loading}
 							onRefresh={() => void loadData()}
 							onCreateTask={async (payload) => {
 								await api.createTask(payload);
+							}}
+							onUpdateSchedulerConfig={async (payload) => {
+								const updated = await api.updateSchedulerConfig(payload);
+								setSchedulerConfig(updated);
+							}}
+							onTriggerSchedulerNow={async () => {
+								await api.triggerSchedulerNow();
 							}}
 						/>
 					) : null}

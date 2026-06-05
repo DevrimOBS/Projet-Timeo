@@ -10,6 +10,8 @@ services:
     environment:
       - AGENT_ID=novisec-agent-001
       - API_URL=https://api:3001
+      - API_CA_CERT_FILE=/certs/ca.crt
+      - INSECURE_SKIP_TLS_VERIFY=false
       - API_TOKEN=${AGENT_TOKEN}
       - TRIVY_ENABLED=true
       - TRIVY_CACHE_DIR=/tmp/trivy-cache
@@ -17,6 +19,7 @@ services:
     volumes:
       # Accès au socket Docker en lecture seule selon le CDC (4.2)
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/certs:ro
     depends_on:
       - api
     networks:

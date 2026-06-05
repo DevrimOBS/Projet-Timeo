@@ -18,17 +18,30 @@ const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const role_enum_1 = require("../../common/enums/role.enum");
 const basic_auth_guard_1 = require("../../common/guards/basic-auth.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
+const scan_scheduler_dto_1 = require("./dto/scan-scheduler.dto");
 const scan_task_dto_1 = require("./dto/scan-task.dto");
 const scan_queue_service_1 = require("./scan-queue.service");
+const scan_task_scheduler_service_1 = require("./scan-task-scheduler.service");
 let ScanQueueController = class ScanQueueController {
-    constructor(scanQueueService) {
+    constructor(scanQueueService, scanTaskSchedulerService) {
         this.scanQueueService = scanQueueService;
+        this.scanTaskSchedulerService = scanTaskSchedulerService;
     }
     createTask(payload, request) {
         return this.scanQueueService.createTask(payload, request.user?.subject ?? "admin");
     }
     listTasks() {
         return this.scanQueueService.listTasks();
+    }
+    getSchedulerConfig() {
+        return this.scanTaskSchedulerService.getConfig();
+    }
+    updateSchedulerConfig(payload) {
+        return this.scanTaskSchedulerService.updateConfig(payload);
+    }
+    async triggerSchedulerNow() {
+        await this.scanTaskSchedulerService.triggerNow();
+        return { accepted: true };
     }
     async claimTask(request, response) {
         const task = await this.scanQueueService.claimNextTask(request.user?.subject ?? "agent");
@@ -60,6 +73,29 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ScanQueueController.prototype, "listTasks", null);
 __decorate([
+    (0, common_1.Get)("scheduler-config"),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.ADMIN, role_enum_1.Role.VIEWER),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ScanQueueController.prototype, "getSchedulerConfig", null);
+__decorate([
+    (0, common_1.Post)("scheduler-config"),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.ADMIN),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [scan_scheduler_dto_1.UpdateScanSchedulerDto]),
+    __metadata("design:returntype", void 0)
+], ScanQueueController.prototype, "updateSchedulerConfig", null);
+__decorate([
+    (0, common_1.Post)("scheduler-trigger"),
+    (0, common_1.HttpCode)(202),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.ADMIN),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], ScanQueueController.prototype, "triggerSchedulerNow", null);
+__decorate([
     (0, common_1.Post)("claim"),
     (0, common_1.HttpCode)(200),
     (0, roles_decorator_1.Roles)(role_enum_1.Role.AGENT),
@@ -83,5 +119,7 @@ exports.ScanQueueController = ScanQueueController = __decorate([
     (0, common_1.Controller)("api/scan-tasks"),
     (0, common_1.UseGuards)(basic_auth_guard_1.BasicAuthGuard, roles_guard_1.RolesGuard),
     __param(0, (0, common_1.Inject)(scan_queue_service_1.ScanQueueService)),
-    __metadata("design:paramtypes", [scan_queue_service_1.ScanQueueService])
+    __param(1, (0, common_1.Inject)(scan_task_scheduler_service_1.ScanTaskSchedulerService)),
+    __metadata("design:paramtypes", [scan_queue_service_1.ScanQueueService,
+        scan_task_scheduler_service_1.ScanTaskSchedulerService])
 ], ScanQueueController);

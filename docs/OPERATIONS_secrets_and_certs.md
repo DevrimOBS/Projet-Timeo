@@ -6,9 +6,8 @@ Objectif : procedures courtes et reproductibles pour la rotation des certificats
 
 La stack Docker locale utilise :
 
-- API HTTP interne/exposee : `http://localhost:3000` vers le port container `3001`
-- API HTTPS : `https://localhost:3002` vers le port container `3002`
-- Agent vers API : `https://api:3002`
+- API HTTPS exposee : `https://localhost:3002` vers le port container `3001`
+- Agent vers API : `https://api:3001`
 - CA agent : `/certs/ca.crt`
 
 Le dossier `./certs` est monte en lecture seule dans `api` et `agent`.
@@ -45,14 +44,14 @@ Les variables attendues dans `docker-compose.yml` sont :
 api:
   environment:
     - HTTPS_ENABLED=true
-    - HTTPS_KEY_FILE=/certs/server.key
-    - HTTPS_CERT_FILE=/certs/server.crt
+    - HTTPS_PFX_FILE=/certs/server.pfx
+    - HTTPS_PFX_PASSPHRASE=${HTTPS_PFX_PASSPHRASE}
   volumes:
     - ./certs:/certs:ro
 
 agent:
   environment:
-    - API_URL=https://api:3002
+    - API_URL=https://api:3001
     - API_CA_CERT_FILE=/certs/ca.crt
     - INSECURE_SKIP_TLS_VERIFY=false
   volumes:

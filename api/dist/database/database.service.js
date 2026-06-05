@@ -23,9 +23,11 @@ let DatabaseService = DatabaseService_1 = class DatabaseService {
             password: process.env.POSTGRES_PASSWORD ?? "postgres",
             database: process.env.POSTGRES_DB ?? "novisec"
         });
+        this.initMaxRetries = Number(process.env.DB_INIT_MAX_RETRIES ?? 20);
+        this.initRetryDelayMs = Number(process.env.DB_INIT_RETRY_DELAY_MS ?? 1500);
     }
     async onModuleInit() {
-        await this.ensureSchema();
+        await this.ensureSchemaWithRetry();
         this.logger.log("PostgreSQL schema ready");
     }
     async onModuleDestroy() {
@@ -122,6 +124,24 @@ let DatabaseService = DatabaseService_1 = class DatabaseService {
         await this.query(`CREATE INDEX IF NOT EXISTS idx_scan_tasks_status_requested_at ON scan_tasks (status, requested_at);`);
         await this.query(`CREATE INDEX IF NOT EXISTS idx_scan_containers_scan_id ON scan_containers (scan_id);`);
         await this.query(`CREATE INDEX IF NOT EXISTS idx_vulnerabilities_container_row_id ON vulnerabilities (container_row_id);`);
+    }
+    async ensureSchemaWithRetry() {
+        let lastError;
+        for (let attempt = 1; attempt <= this.initMaxRetries; attempt += 1) {
+            try {
+                await this.ensureSchema();
+                return;
+            }
+            catch (error) {
+                lastError = error;
+                const isLastAttempt = attempt === this.initMaxRetries;
+                this.logger.warn(`Database initialization attempt ${attempt}/${this.initMaxRetries} failed.${isLastAttempt ? "" : ` Retrying in ${this.initRetryDelayMs}ms...`}`);
+                if (!isLastAttempt) {
+                    await new Promise((resolve) => setTimeout(resolve, this.initRetryDelayMs));
+                }
+            }
+        }
+        throw lastError instanceof Error ? lastError : new Error("Database initialization failed");
     }
 };
 exports.DatabaseService = DatabaseService;

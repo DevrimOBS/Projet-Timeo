@@ -1,4 +1,13 @@
-import { ContainerDetails, ContainerSummary, CreateScanTaskPayload, MatrixData, OverviewData, ScanTask } from "../types";
+import {
+  ContainerDetails,
+  ContainerSummary,
+  CreateScanTaskPayload,
+  MatrixData,
+  OverviewData,
+  ScanSchedulerConfig,
+  ScanTask,
+  UpdateScanSchedulerPayload
+} from "../types";
 
 function normalizeApiUrl(value: string): string {
   return value.trim().replace(/\/+$/, "");
@@ -160,6 +169,20 @@ export const api = {
     return request<ScanTask>("/api/scan-tasks", {
       method: "POST",
       body: JSON.stringify(payload)
+    });
+  },
+  async schedulerConfig(): Promise<ScanSchedulerConfig> {
+    return request<ScanSchedulerConfig>("/api/scan-tasks/scheduler-config");
+  },
+  async updateSchedulerConfig(payload: UpdateScanSchedulerPayload): Promise<ScanSchedulerConfig> {
+    return request<ScanSchedulerConfig>("/api/scan-tasks/scheduler-config", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+  async triggerSchedulerNow(): Promise<void> {
+    await request<{ accepted: boolean }>("/api/scan-tasks/scheduler-trigger", {
+      method: "POST"
     });
   },
   async login(username: string, password: string, otp?: string): Promise<{ token: string; expiresIn: string }> {

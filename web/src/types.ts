@@ -73,3 +73,23 @@ export interface CreateScanTaskPayload {
   container_ids?: string[];
   message?: string;
 }
+
+export interface ScanSchedulerConfig {
+  enabled: boolean;
+  cron: string;
+  timezone: string | null;
+  run_on_startup: boolean;
+  requested_by: string;
+  message: string;
+  container_ids: string[];
+}
+
+export interface UpdateScanSchedulerPayload {
+  enabled?: boolean;
+  cron?: string;
+  timezone?: string;
+  run_on_startup?: boolean;
+  requested_by?: string;
+  message?: string;
+  container_ids?: string[];
+}

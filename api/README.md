@@ -59,3 +59,23 @@ Authentification: header Authorization Bearer <token>
 ## CVE auto update
 
 Un job interne planifie met a jour les metadonnees CVE toutes les 6 heures depuis le flux NVD (table cve_updates).
+
+## Scan task scheduler metier
+
+Un scheduler metier peut creer automatiquement des taches de scan dans `scan_tasks` (mode `AUTO_CRON`).
+
+Variables d environnement associees:
+
+- SCAN_TASK_SCHEDULER_ENABLED (defaut: false)
+- SCAN_TASK_SCHEDULER_CRON (defaut: 0 */12 * * *)
+- SCAN_TASK_SCHEDULER_TIMEZONE (optionnel, ex: Europe/Paris)
+- SCAN_TASK_SCHEDULER_RUN_ON_STARTUP (defaut: false)
+- SCAN_TASK_SCHEDULER_REQUESTED_BY (defaut: system:scheduler)
+- SCAN_TASK_SCHEDULER_MESSAGE (defaut: Scan automatique planifie)
+- SCAN_TASK_SCHEDULER_CONTAINER_IDS (optionnel, liste CSV d identifiants de conteneurs cibles)
+
+Endpoints associes:
+
+- GET /api/scan-tasks/scheduler-config (admin, viewer)
+- POST /api/scan-tasks/scheduler-config (admin)
+- POST /api/scan-tasks/scheduler-trigger (admin)

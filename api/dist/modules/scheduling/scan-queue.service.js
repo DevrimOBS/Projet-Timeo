@@ -34,6 +34,14 @@ let ScanQueueService = class ScanQueueService {
        ORDER BY requested_at DESC`);
         return result.rows.map((row) => this.normalizeTask(row));
     }
+    async hasPendingAutoTask() {
+        const result = await this.db.query(`SELECT EXISTS (
+         SELECT 1
+         FROM scan_tasks
+         WHERE mode = 'AUTO_CRON' AND status IN ('queued', 'processing')
+       ) as exists`);
+        return Boolean(result.rows[0]?.exists);
+    }
     async claimNextTask(agentId) {
         return this.db.transaction(async (client) => {
             const candidate = await client.query(`SELECT id

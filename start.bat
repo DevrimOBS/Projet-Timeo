@@ -58,7 +58,6 @@ echo ===============================================
 echo.
 echo Dashboard:  https://localhost:5173
 echo API HTTPS:  https://localhost:3002
-echo API HTTP:   http://localhost:3000
 echo Database:   localhost:5432
 echo.
 echo To stop services, run: docker compose down

@@ -4,13 +4,18 @@ import { Role } from "../../common/enums/role.enum";
 import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import type { RequestWithUser } from "../../common/types/request-with-user";
+import { UpdateScanSchedulerDto } from "./dto/scan-scheduler.dto";
 import { CompleteScanTaskDto, CreateScanTaskDto } from "./dto/scan-task.dto";
 import { ScanQueueService } from "./scan-queue.service";
+import { ScanTaskSchedulerService } from "./scan-task-scheduler.service";
 
 @Controller("api/scan-tasks")
 @UseGuards(BasicAuthGuard, RolesGuard)
 export class ScanQueueController {
-  constructor(@Inject(ScanQueueService) private readonly scanQueueService: ScanQueueService) {}
+  constructor(
+    @Inject(ScanQueueService) private readonly scanQueueService: ScanQueueService,
+    @Inject(ScanTaskSchedulerService) private readonly scanTaskSchedulerService: ScanTaskSchedulerService
+  ) {}
 
   @Post()
   @Roles(Role.ADMIN)
@@ -22,6 +27,26 @@ export class ScanQueueController {
   @Roles(Role.ADMIN, Role.VIEWER)
   listTasks() {
     return this.scanQueueService.listTasks();
+  }
+
+  @Get("scheduler-config")
+  @Roles(Role.ADMIN, Role.VIEWER)
+  getSchedulerConfig() {
+    return this.scanTaskSchedulerService.getConfig();
+  }
+
+  @Post("scheduler-config")
+  @Roles(Role.ADMIN)
+  updateSchedulerConfig(@Body() payload: UpdateScanSchedulerDto) {
+    return this.scanTaskSchedulerService.updateConfig(payload);
+  }
+
+  @Post("scheduler-trigger")
+  @HttpCode(202)
+  @Roles(Role.ADMIN)
+  async triggerSchedulerNow() {
+    await this.scanTaskSchedulerService.triggerNow();
+    return { accepted: true };
   }
 
   @Post("claim")
