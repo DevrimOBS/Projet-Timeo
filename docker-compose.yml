@@ -9,7 +9,7 @@ services:
       - /tmp
     environment:
       - AGENT_ID=novisec-agent-001
-      - API_URL=http://api:3001
+      - API_URL=https://api:3001
       - API_TOKEN=${AGENT_TOKEN}
       - TRIVY_ENABLED=true
       - TRIVY_CACHE_DIR=/tmp/trivy-cache
@@ -26,8 +26,7 @@ services:
     build: ./api
     container_name: novisec-api
     ports:
-      - "3000:3001"
-      - "3002:3002"
+      - "3002:3001"
     env_file:
       - .env
     environment:
@@ -64,7 +63,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_PROXY_TARGET=https://api:3002
+      - VITE_API_PROXY_TARGET=https://api:3001
       - VITE_HTTPS_ENABLED=true
       - VITE_HTTPS_KEY_FILE=/certs/server.key
       - VITE_HTTPS_CERT_FILE=/certs/server.crt

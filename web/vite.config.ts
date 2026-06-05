@@ -21,7 +21,7 @@ export default defineConfig({
     https: httpsConfig,
     proxy: {
       "/api": {
-        target: process.env.VITE_API_PROXY_TARGET ?? "http://localhost:3000",
+        target: process.env.VITE_API_PROXY_TARGET ?? "https://localhost:3002",
         changeOrigin: true,
         secure: false
       }

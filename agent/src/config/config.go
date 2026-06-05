@@ -31,7 +31,7 @@ type Config struct {
 func Load() (Config, error) {
 	cfg := Config{
 		AgentID:        "novisec-agent-001",
-		APIURL:         "https://api:3002",
+		APIURL:         "https://api:3001",
 		DockerSocket:   "/var/run/docker.sock",
 		TrivyPath:      "trivy",
 		TrivyEnabled:   true,
