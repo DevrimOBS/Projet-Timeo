@@ -39,7 +39,7 @@ export default function Reports({
   const [schedulerTimezone, setSchedulerTimezone] = useState<string>(schedulerConfig?.timezone ?? "");
   const [schedulerRunOnStartup, setSchedulerRunOnStartup] = useState<boolean>(schedulerConfig?.run_on_startup ?? false);
   const [schedulerRequestedBy, setSchedulerRequestedBy] = useState<string>(schedulerConfig?.requested_by ?? "system:scheduler");
-  const [schedulerMessage, setSchedulerMessage] = useState<string>(schedulerConfig?.message ?? "Scan automatique planifie");
+  const [schedulerMessage, setSchedulerMessage] = useState<string>(schedulerConfig?.message ?? "Scan automatique planifié");
   const [schedulerContainerIds, setSchedulerContainerIds] = useState<string>((schedulerConfig?.container_ids ?? []).join(","));
   const [alertSubmittingId, setAlertSubmittingId] = useState<string | null>(null);
 
@@ -101,10 +101,10 @@ export default function Reports({
           .map((item) => item.trim())
           .filter(Boolean)
       });
-      setSchedulerNotice("Planification automatique mise a jour.");
+      setSchedulerNotice("Planification automatique mise à jour.");
       onRefresh();
     } catch (error) {
-      setSchedulerNotice(error instanceof Error ? error.message : "Impossible de mettre a jour la planification.");
+      setSchedulerNotice(error instanceof Error ? error.message : "Impossible de mettre à jour la planification.");
     } finally {
       setSchedulerSubmitting(false);
     }
@@ -116,10 +116,10 @@ export default function Reports({
 
     try {
       await onTriggerSchedulerNow();
-      setSchedulerNotice("Demande acceptee: la tache AUTO_CRON sera creee si aucune tache auto n est deja en attente.");
+      setSchedulerNotice("Demande acceptée: la tâche AUTO_CRON sera créée si aucune tâche auto n'est déjà en attente.");
       onRefresh();
     } catch (error) {
-      setSchedulerNotice(error instanceof Error ? error.message : "Impossible de declencher la planification.");
+      setSchedulerNotice(error instanceof Error ? error.message : "Impossible de déclencher la planification.");
     } finally {
       setSchedulerTriggering(false);
     }
@@ -130,7 +130,7 @@ export default function Reports({
     setNotice(null);
     try {
       await onAcknowledgeAlert(alertId);
-      setNotice("Alerte acquittee.");
+      setNotice("Alerte acquittée.");
       onRefresh();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Impossible d'acquitter l'alerte.");
@@ -190,7 +190,7 @@ export default function Reports({
                 </div>
                 <p>{alert.title ?? `Package: ${alert.package_name} · CVSS ${alert.cvss}`}</p>
                 <div className="meta-grid">
-                  <span>Delivery: {alert.delivery_status}</span>
+                  <span>Livraison: {alert.delivery_status}</span>
                   <span>Scan: {alert.scan_id}</span>
                   <span>{new Date(alert.created_at).toLocaleString("fr-FR")}</span>
                 </div>
@@ -232,7 +232,7 @@ export default function Reports({
             </label>
 
             <label className="form-label">
-              Container IDs ciblés
+              Identifiants de conteneurs ciblés
               <input
                 value={containerIds}
                 onChange={(event) => setContainerIds(event.target.value)}
@@ -276,12 +276,12 @@ export default function Reports({
                 </label>
 
                 <label className="form-label">
-                  Timezone
+                  Fuseau horaire
                   <input value={schedulerTimezone} onChange={(event) => setSchedulerTimezone(event.target.value)} placeholder="Europe/Paris" />
                 </label>
 
                 <label className="form-label">
-                  Lancer au demarrage
+                  Lancer au démarrage
                   <select
                     value={schedulerRunOnStartup ? "true" : "false"}
                     onChange={(event) => setSchedulerRunOnStartup(event.target.value === "true")}
@@ -292,7 +292,7 @@ export default function Reports({
                 </label>
 
                 <label className="form-label">
-                  requested_by
+                  Demandeur (requested_by)
                   <input value={schedulerRequestedBy} onChange={(event) => setSchedulerRequestedBy(event.target.value)} placeholder="system:scheduler" />
                 </label>
 
@@ -302,7 +302,7 @@ export default function Reports({
                 </label>
 
                 <label className="form-label">
-                  Container IDs cibles (CSV)
+                  Identifiants de conteneurs cibles (CSV)
                   <input
                     value={schedulerContainerIds}
                     onChange={(event) => setSchedulerContainerIds(event.target.value)}
@@ -320,14 +320,14 @@ export default function Reports({
                     disabled={schedulerTriggering}
                     type="button"
                   >
-                    {schedulerTriggering ? "Declenchement…" : "Declencher maintenant"}
+                    {schedulerTriggering ? "Déclenchement…" : "Déclencher maintenant"}
                   </button>
                 </div>
 
                 {schedulerNotice ? <p className="muted">{schedulerNotice}</p> : null}
               </>
             ) : (
-              <p className="muted">Configuration indisponible (droits insuffisants ou API non a jour).</p>
+              <p className="muted">Configuration indisponible (droits insuffisants ou API non à jour).</p>
             )}
           </div>
         </div>

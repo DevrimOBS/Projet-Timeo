@@ -28,8 +28,8 @@ export default function Vulnerabilities({ matrix, containerSeverityData, loading
   const keyFigures = [
     { label: "Total CVE", value: total.toString() },
     { label: "Critiques", value: `${total > 0 ? ((critical / total) * 100).toFixed(1) : "0.0"}%` },
-    { label: "Conteneurs avec critical", value: `${containersWithCritical}/${totalContainers}` },
-    { label: "Moyenne CVE / conteneur vulnerable", value: avgByVulnerableContainer.toFixed(1) }
+    { label: "Conteneurs avec criticité critique", value: `${containersWithCritical}/${totalContainers}` },
+    { label: "Moyenne CVE par conteneur vulnérable", value: avgByVulnerableContainer.toFixed(1) }
   ];
 
   return (

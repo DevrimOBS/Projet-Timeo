@@ -8,11 +8,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuditInterceptor = void 0;
 const common_1 = require("@nestjs/common");
+const promises_1 = require("fs/promises");
+const path_1 = require("path");
 const operators_1 = require("rxjs/operators");
 let AuditInterceptor = class AuditInterceptor {
     constructor() {
         this.logger = new common_1.Logger('AUDIT');
+        this.auditLogPath = process.env.AUDIT_LOG_PATH?.trim() || '';
+        this.maxInMemoryLogs = Number(process.env.AUDIT_LOG_MAX_IN_MEMORY ?? 5000);
         this.auditLogs = [];
+        this.fileWriteQueue = Promise.resolve();
+        this.writeInitDone = false;
+        this.writeDisabled = false;
     }
     intercept(context, next) {
         const request = context.switchToHttp().getRequest();
@@ -21,13 +28,10 @@ let AuditInterceptor = class AuditInterceptor {
         const method = request.method;
         const path = request.path;
         const ip = request.ip || request.connection.remoteAddress || 'unknown';
-        // Extract token from Authorization header
-        const authHeader = request.get('Authorization') || '';
-        const token = authHeader.replace('Bearer ', '').substring(0, 20); // Log first 20 chars only
-        // Log request body for POST/PUT (except passwords)
+        const token = this.extractTokenPreview(request.get('Authorization'));
         const body = this.sanitizeBody(request.body);
         return next.handle().pipe((0, operators_1.tap)({
-            next: (result) => {
+            next: () => {
                 const duration = Date.now() - startTime;
                 const status = response.statusCode;
                 const auditLog = {
@@ -40,8 +44,7 @@ let AuditInterceptor = class AuditInterceptor {
                     token: token || undefined,
                     body: Object.keys(body).length > 0 ? body : undefined,
                 };
-                this.auditLogs.push(auditLog);
-                // Log to console (in production, send to external logger)
+                this.recordAuditLog(auditLog);
                 if (this.isAuditableAction(method, path)) {
                     this.logger.log(`[${status}] ${method} ${path} (${duration}ms) - IP: ${ip}`);
                 }
@@ -59,10 +62,47 @@ let AuditInterceptor = class AuditInterceptor {
                     token: token || undefined,
                     body: Object.keys(body).length > 0 ? body : undefined,
                 };
-                this.auditLogs.push(auditLog);
+                this.recordAuditLog(auditLog);
                 this.logger.error(`[${status}] ${method} ${path} (${duration}ms) - Error: ${error.message}`);
             },
         }));
+    }
+    recordAuditLog(auditLog) {
+        this.auditLogs.push(auditLog);
+        if (this.auditLogs.length > this.maxInMemoryLogs) {
+            this.auditLogs.splice(0, this.auditLogs.length - this.maxInMemoryLogs);
+        }
+        if (this.auditLogPath) {
+            this.enqueueFileWrite(auditLog);
+        }
+    }
+    enqueueFileWrite(auditLog) {
+        if (this.writeDisabled) {
+            return;
+        }
+        this.fileWriteQueue = this.fileWriteQueue
+            .then(async () => {
+            if (!this.writeInitDone) {
+                await (0, promises_1.mkdir)((0, path_1.dirname)(this.auditLogPath), { recursive: true });
+                this.writeInitDone = true;
+            }
+            await (0, promises_1.appendFile)(this.auditLogPath, `${JSON.stringify(auditLog)}\n`, 'utf-8');
+        })
+            .catch((err) => {
+            this.writeDisabled = true;
+            const message = err instanceof Error ? err.message : String(err);
+            this.logger.error(`Failed to persist audit log to ${this.auditLogPath}: ${message}`);
+        });
+    }
+    extractTokenPreview(authHeader) {
+        if (!authHeader) {
+            return undefined;
+        }
+        const [scheme, token] = authHeader.split(' ');
+        if (scheme !== 'Bearer' || !token) {
+            return undefined;
+        }
+        return token.slice(0, 20);
     }
     sanitizeBody(body) {
         if (!body || typeof body !== 'object') {
@@ -98,7 +138,7 @@ let AuditInterceptor = class AuditInterceptor {
     clearAuditLogs() {
         this.auditLogs = [];
     }
-    // Export logs to file (can be called periodically)
+    // Export logs snapshot on demand.
     exportLogsToFile(filePath) {
         const fs = require('fs');
         fs.writeFileSync(filePath, JSON.stringify(this.auditLogs, null, 2), 'utf-8');

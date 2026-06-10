@@ -35,10 +35,10 @@ export default function Overview({ overview, containerSeverityData, loading }: P
   const avgCvePerVulnerableContainer = vulnerable > 0 ? totalCve / vulnerable : 0;
   const mostExposedContainer = chartData[0] ?? null;
   const dominantSeverity = [
-    { label: "Critical", value: totalBySeverity.critical },
-    { label: "High", value: totalBySeverity.high },
-    { label: "Medium", value: totalBySeverity.medium },
-    { label: "Low", value: totalBySeverity.low }
+    { label: "Critique", value: totalBySeverity.critical },
+    { label: "Haute", value: totalBySeverity.high },
+    { label: "Moyenne", value: totalBySeverity.medium },
+    { label: "Faible", value: totalBySeverity.low }
   ].sort((a, b) => b.value - a.value)[0];
 
   const criticalStop = totalCve > 0 ? (totalBySeverity.critical / totalCve) * 100 : 0;
@@ -46,9 +46,9 @@ export default function Overview({ overview, containerSeverityData, loading }: P
   const mediumStop = totalCve > 0 ? highStop + (totalBySeverity.medium / totalCve) * 100 : highStop;
 
   const metricCards = [
-    { label: "Scans executes", value: scansCount },
+    { label: "Scans exécutés", value: scansCount },
     { label: "Conteneurs sains", value: healthy },
-    { label: "Conteneurs vulnerables", value: vulnerable },
+    { label: "Conteneurs vulnérables", value: vulnerable },
     { label: "Risque global", value: `${normalizedRiskClamped.toFixed(1)} / 10` }
   ];
 
@@ -56,8 +56,8 @@ export default function Overview({ overview, containerSeverityData, loading }: P
     <section className="panel dashboard-panel">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Dashboards</p>
-          <h2>Analytics</h2>
+          <p className="eyebrow">Tableau de bord</p>
+          <h2>Vue analytique</h2>
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export default function Overview({ overview, containerSeverityData, loading }: P
       <div className="analytics-grid">
         <article className="glass-card chart-card">
           <div className="section-heading">
-            <h2>Sessions</h2>
+            <h2>Exposition par conteneur</h2>
             <div className="chip-row">
               <span className="chip chip-active">{chartData.length} conteneurs</span>
             </div>
@@ -87,10 +87,10 @@ export default function Overview({ overview, containerSeverityData, loading }: P
           ) : (
             <>
               <div className="bar-legend" aria-hidden="true">
-                <span><i className="legend-dot legend-critical" />Critical</span>
-                <span><i className="legend-dot legend-high" />High</span>
-                <span><i className="legend-dot legend-medium" />Medium</span>
-                <span><i className="legend-dot legend-low" />Low</span>
+                <span><i className="legend-dot legend-critical" />Critique</span>
+                <span><i className="legend-dot legend-high" />Haute</span>
+                <span><i className="legend-dot legend-medium" />Moyenne</span>
+                <span><i className="legend-dot legend-low" />Faible</span>
               </div>
 
               <div className="bar-chart-scroll">
@@ -101,7 +101,7 @@ export default function Overview({ overview, containerSeverityData, loading }: P
                       <div
                         className="stacked-bar"
                         style={{ height: `${(item.total / maxContainerTotal) * 100}%` }}
-                        title={`Critical: ${item.critical} | High: ${item.high} | Medium: ${item.medium} | Low: ${item.low} | Total: ${item.total}`}
+                        title={`Critique: ${item.critical} | Haute: ${item.high} | Moyenne: ${item.medium} | Faible: ${item.low} | Total: ${item.total}`}
                       >
                         {item.low > 0 ? <span className="bar-segment bar-low" style={{ flexGrow: item.low }} /> : null}
                         {item.medium > 0 ? <span className="bar-segment bar-medium" style={{ flexGrow: item.medium }} /> : null}
@@ -110,7 +110,7 @@ export default function Overview({ overview, containerSeverityData, loading }: P
                       </div>
                     </div>
                     <p className="bar-container-name" title={item.name}>{item.name}</p>
-                    <p className="bar-total">Total: {item.total}</p>
+                    <p className="bar-total">Total CVE: {item.total}</p>
                   </article>
                 ))}
                 </div>
@@ -120,7 +120,7 @@ export default function Overview({ overview, containerSeverityData, loading }: P
         </article>
 
         <article className="glass-card donut-card">
-          <h2>CVE by severity</h2>
+          <h2>CVE par criticité</h2>
           <div
             className="donut-ring"
             aria-hidden="true"
@@ -130,32 +130,32 @@ export default function Overview({ overview, containerSeverityData, loading }: P
           />
           <p className="muted">Total CVE (tous conteneurs): {loading ? "..." : totalCve}</p>
           <div className="device-stats">
-            <p><span>CVE CRITICAL</span><strong>{loading ? "..." : totalBySeverity.critical}</strong></p>
-            <p><span>CVE HIGH</span><strong>{loading ? "..." : totalBySeverity.high}</strong></p>
-            <p><span>CVE MEDIUM</span><strong>{loading ? "..." : totalBySeverity.medium}</strong></p>
-            <p><span>CVE LOW</span><strong>{loading ? "..." : totalBySeverity.low}</strong></p>
+            <p><span>CVE CRITIQUE</span><strong>{loading ? "..." : totalBySeverity.critical}</strong></p>
+            <p><span>CVE HAUTE</span><strong>{loading ? "..." : totalBySeverity.high}</strong></p>
+            <p><span>CVE MOYENNE</span><strong>{loading ? "..." : totalBySeverity.medium}</strong></p>
+            <p><span>CVE FAIBLE</span><strong>{loading ? "..." : totalBySeverity.low}</strong></p>
           </div>
         </article>
       </div>
 
       <div className="bottom-grid bottom-grid-single">
         <article className="glass-card">
-          <h2>Insights scanner</h2>
+          <h2>Indicateurs de scan</h2>
           <div className="matrix-list">
             <div className="matrix-row">
-              <span>Conteneur le plus expose</span>
+              <span>Conteneur le plus exposé</span>
               <strong>{loading ? "..." : mostExposedContainer ? `${mostExposedContainer.name} (${mostExposedContainer.total})` : "Aucun"}</strong>
             </div>
             <div className="matrix-row">
-              <span>Taux de conteneurs vulnerables</span>
+              <span>Taux de conteneurs vulnérables</span>
               <strong>{loading ? "..." : `${vulnerableRatio.toFixed(1)}%`}</strong>
             </div>
             <div className="matrix-row">
-              <span>Moyenne CVE / conteneur vulnerable</span>
+              <span>Moyenne CVE par conteneur vulnérable</span>
               <strong>{loading ? "..." : avgCvePerVulnerableContainer.toFixed(1)}</strong>
             </div>
             <div className="matrix-row">
-              <span>Criticite dominante</span>
+              <span>Criticité dominante</span>
               <strong>{loading ? "..." : `${dominantSeverity.label} (${dominantSeverity.value})`}</strong>
             </div>
             <div className="matrix-row">

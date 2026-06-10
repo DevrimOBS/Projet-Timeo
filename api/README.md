@@ -9,6 +9,25 @@ npm install
 npm run test:e2e
 ```
 
+TLS-specific e2e checks (optional) are included in `tests/e2e/tls-validation.spec.ts`.
+They run only when `E2E_HTTPS_BASE_URL` is provided.
+
+Required env vars for TLS checks:
+
+- `E2E_HTTPS_BASE_URL` (example: `https://localhost:3002`)
+- `E2E_CA_CERT_FILE` (path to trusted CA certificate for API TLS)
+- `E2E_BAD_CA_CERT_FILE` (path to a different/untrusted CA certificate)
+
+PowerShell example:
+
+```powershell
+$env:E2E_BASE_URL="http://localhost:3002"
+$env:E2E_HTTPS_BASE_URL="https://localhost:3002"
+$env:E2E_CA_CERT_FILE="C:\Users\nicog\Desktop\Projet-Timeo\certs\ca.crt"
+$env:E2E_BAD_CA_CERT_FILE="C:\path\to\untrusted-ca.crt"
+npm run test:e2e
+```
+
 Or run the smoke script (bash):
 
 ```bash

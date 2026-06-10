@@ -4,8 +4,20 @@ const base = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
 const adminToken = process.env.E2E_ADMIN_TOKEN ?? 'admin-dev-token';
 const agentToken = process.env.E2E_AGENT_TOKEN ?? 'agent-dev-token';
 
+async function assertApiReachable(): Promise<void> {
+  try {
+    await request(base).get('/api/reports/overview');
+  } catch {
+    throw new Error(`API unreachable for e2e tests. Start API and set E2E_BASE_URL if needed (current: ${base}).`);
+  }
+}
+
 describe('Agent → API e2e flow (supertest)', () => {
   jest.setTimeout(30000);
+
+  beforeAll(async () => {
+    await assertApiReachable();
+  });
 
   it('creates a task, claims it, posts a scan and completes the task', async () => {
     // 1) create task

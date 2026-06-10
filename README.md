@@ -19,3 +19,11 @@ Construire une première version avec 2 composants :
 - Audit basique des images Docker locales.
 - Restitution simple des résultats (sans fonctionnalités avancées).
 - Base de travail pour itérer ensuite avec l’équipe.
+
+## Documentation utile
+
+- Spécification API: `docs/api-spec.md`
+- Déploiement: `docs/DEPLOYMENT.md`
+- Opérations secrets/certificats: `docs/OPERATIONS_secrets_and_certs.md`
+- Checklist release sécurité: `docs/SECURITY_RELEASE_CHECKLIST.md`
+- Rapport de validation sécurité: `docs/SECURITY_VALIDATION_REPORT_2026-06-10.md`

@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
+const throttler_1 = require("@nestjs/throttler");
 const auth_module_1 = require("./modules/auth/auth.module");
 const database_module_1 = require("./database/database.module");
 const reports_module_1 = require("./modules/reports/reports.module");
@@ -20,8 +21,25 @@ let AppModule = class AppModule {
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_module_1.DatabaseModule, auth_module_1.AuthModule, scans_module_1.ScansModule, reports_module_1.ReportsModule, scheduling_module_1.SchedulingModule],
+        imports: [
+            throttler_1.ThrottlerModule.forRoot([
+                {
+                    name: "default",
+                    ttl: Number(process.env.AUTH_RATE_LIMIT_TTL_MS ?? 60_000),
+                    limit: Number(process.env.AUTH_RATE_LIMIT_GLOBAL_LIMIT ?? 200)
+                }
+            ]),
+            database_module_1.DatabaseModule,
+            auth_module_1.AuthModule,
+            scans_module_1.ScansModule,
+            reports_module_1.ReportsModule,
+            scheduling_module_1.SchedulingModule
+        ],
         providers: [
+            {
+                provide: core_1.APP_GUARD,
+                useClass: throttler_1.ThrottlerGuard
+            },
             {
                 provide: core_1.APP_INTERCEPTOR,
                 useClass: audit_interceptor_1.AuditInterceptor,

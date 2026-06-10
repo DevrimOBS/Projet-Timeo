@@ -5,6 +5,8 @@ import {
 	CallHandler,
 	Logger,
 } from '@nestjs/common';
+import { appendFile, mkdir } from 'fs/promises';
+import { dirname } from 'path';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Request } from 'express';
@@ -24,7 +26,12 @@ interface AuditLog {
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
 	private readonly logger = new Logger('AUDIT');
+	private readonly auditLogPath = process.env.AUDIT_LOG_PATH?.trim() || '';
+	private readonly maxInMemoryLogs = Number(process.env.AUDIT_LOG_MAX_IN_MEMORY ?? 5000);
 	private auditLogs: AuditLog[] = [];
+	private fileWriteQueue: Promise<void> = Promise.resolve();
+	private writeInitDone = false;
+	private writeDisabled = false;
 
 	intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
 		const request = context.switchToHttp().getRequest<Request>();
@@ -35,16 +42,13 @@ export class AuditInterceptor implements NestInterceptor {
 		const path = request.path;
 		const ip = request.ip || request.connection.remoteAddress || 'unknown';
 
-		// Extract token from Authorization header
-		const authHeader = request.get('Authorization') || '';
-		const token = authHeader.replace('Bearer ', '').substring(0, 20); // Log first 20 chars only
+		const token = this.extractTokenPreview(request.get('Authorization'));
 
-		// Log request body for POST/PUT (except passwords)
 		const body = this.sanitizeBody(request.body);
 
 		return next.handle().pipe(
 			tap({
-				next: (result) => {
+				next: () => {
 					const duration = Date.now() - startTime;
 					const status = response.statusCode;
 
@@ -59,9 +63,8 @@ export class AuditInterceptor implements NestInterceptor {
 						body: Object.keys(body).length > 0 ? body : undefined,
 					};
 
-					this.auditLogs.push(auditLog);
+					this.recordAuditLog(auditLog);
 
-					// Log to console (in production, send to external logger)
 					if (this.isAuditableAction(method, path)) {
 						this.logger.log(
 							`[${status}] ${method} ${path} (${duration}ms) - IP: ${ip}`
@@ -83,7 +86,7 @@ export class AuditInterceptor implements NestInterceptor {
 						body: Object.keys(body).length > 0 ? body : undefined,
 					};
 
-					this.auditLogs.push(auditLog);
+					this.recordAuditLog(auditLog);
 
 					this.logger.error(
 						`[${status}] ${method} ${path} (${duration}ms) - Error: ${error.message}`
@@ -91,6 +94,51 @@ export class AuditInterceptor implements NestInterceptor {
 				},
 			})
 		);
+	}
+
+	private recordAuditLog(auditLog: AuditLog): void {
+		this.auditLogs.push(auditLog);
+		if (this.auditLogs.length > this.maxInMemoryLogs) {
+			this.auditLogs.splice(0, this.auditLogs.length - this.maxInMemoryLogs);
+		}
+
+		if (this.auditLogPath) {
+			this.enqueueFileWrite(auditLog);
+		}
+	}
+
+	private enqueueFileWrite(auditLog: AuditLog): void {
+		if (this.writeDisabled) {
+			return;
+		}
+
+		this.fileWriteQueue = this.fileWriteQueue
+			.then(async () => {
+				if (!this.writeInitDone) {
+					await mkdir(dirname(this.auditLogPath), { recursive: true });
+					this.writeInitDone = true;
+				}
+
+				await appendFile(this.auditLogPath, `${JSON.stringify(auditLog)}\n`, 'utf-8');
+			})
+			.catch((err: unknown) => {
+				this.writeDisabled = true;
+				const message = err instanceof Error ? err.message : String(err);
+				this.logger.error(`Failed to persist audit log to ${this.auditLogPath}: ${message}`);
+			});
+	}
+
+	private extractTokenPreview(authHeader: string | undefined): string | undefined {
+		if (!authHeader) {
+			return undefined;
+		}
+
+		const [scheme, token] = authHeader.split(' ');
+		if (scheme !== 'Bearer' || !token) {
+			return undefined;
+		}
+
+		return token.slice(0, 20);
 	}
 
 	private sanitizeBody(body: any): any {
@@ -136,7 +184,7 @@ export class AuditInterceptor implements NestInterceptor {
 		this.auditLogs = [];
 	}
 
-	// Export logs to file (can be called periodically)
+	// Export logs snapshot on demand.
 	exportLogsToFile(filePath: string): void {
 		const fs = require('fs');
 		fs.writeFileSync(
