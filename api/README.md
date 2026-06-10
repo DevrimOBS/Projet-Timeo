@@ -49,12 +49,49 @@ Backend central pour la reception des scans, le stockage historique PostgreSQL e
 
 Authentification: header Authorization Bearer <token>
 
+## Comptes utilisateurs
+
+Les comptes sont maintenant stockés en base PostgreSQL dans la table `users`.
+
+Endpoints d'administration:
+
+- GET /api/users
+- GET /api/users/me
+- POST /api/users
+- PATCH /api/users/:userId
+- POST /api/users/me/mfa/setup
+- POST /api/users/me/mfa/enable
+- POST /api/users/me/mfa/disable
+- POST /api/users/me/mfa/recovery-codes
+- POST /api/users/:userId/mfa/disable
+
+Ces routes sont réservées au rôle `admin`.
+
+Les routes `me` sont disponibles pour l'utilisateur connecté afin de provisionner et gérer sa propre MFA.
+
 ## Endpoints demandes
 
 - POST /api/scans
 - GET /api/reports/overview
 - GET /api/reports/matrix
 - GET /api/reports/details/:containerId
+- GET /api/reports/alerts
+- POST /api/reports/alerts/:alertId/ack
+
+## Alertes critiques automatiques
+
+Quand une vulnérabilité de sévérité `critical` est ingérée via `POST /api/scans`,
+une alerte est créée automatiquement en base dans la table `alerts`.
+
+Variables d'environnement associées:
+
+- ALERT_WEBHOOK_URL (optionnel): URL d'un webhook HTTP recevant le lot d'alertes critiques
+
+Comportement:
+
+- Sans webhook configuré, l'alerte est persistée mais marquée `delivery_status=skipped`
+- Si webhook configuré et succès HTTP, `delivery_status=delivered`
+- Si webhook configuré et échec HTTP/réseau, `delivery_status=failed` + `delivery_error`
 
 ## CVE auto update
 

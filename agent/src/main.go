@@ -89,8 +89,7 @@ claimLoop:
 			if cfg.TrivyEnabled {
 				findings, err = scanner.ScanImage(ctx, cfg.TrivyPath, imageRef)
 				if err != nil {
-					log.Printf("scan error for %s: %v", imageRef, err)
-					findings = []models.Vulnerability{}
+					log.Fatalf("scan error for %s: %v", imageRef, err)
 				}
 			} else {
 				findings = []models.Vulnerability{}

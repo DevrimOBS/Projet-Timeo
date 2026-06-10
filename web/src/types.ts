@@ -93,3 +93,42 @@ export interface UpdateScanSchedulerPayload {
   message?: string;
   container_ids?: string[];
 }
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  mfaEnabled: boolean;
+  mfaConfiguredAt: string | null;
+}
+
+export interface MfaSetupData {
+  secret: string;
+  otpauthUrl: string;
+  recoveryCodes: string[];
+}
+
+export interface SecurityAlert {
+  id: string;
+  scan_id: string;
+  container_id: string;
+  container_name: string;
+  severity: string;
+  cve: string;
+  package_name: string;
+  title: string | null;
+  description: string | null;
+  cvss: number;
+  status: "open" | "acknowledged";
+  source: string;
+  delivery_status: "pending" | "delivered" | "failed" | "skipped";
+  delivered_at: string | null;
+  acknowledged_at: string | null;
+  acknowledged_by: string | null;
+  delivery_error: string | null;
+  created_at: string;
+}

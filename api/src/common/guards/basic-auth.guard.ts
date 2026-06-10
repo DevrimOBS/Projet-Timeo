@@ -3,11 +3,14 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { Role } from "../enums/role.enum";
 import { RequestWithUser } from "../types/request-with-user";
 import { verifyToken } from "../utils/jwt";
+import { DatabaseService } from "../../database/database.service";
 
 
 @Injectable()
 export class BasicAuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+	constructor(private readonly db: DatabaseService) {}
+
+	async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<RequestWithUser>();
     const authHeader = req.headers.authorization;
 
@@ -24,6 +27,16 @@ export class BasicAuthGuard implements CanActivate {
     const payload = verifyToken(token);
     if (payload) {
       const role = payload.role as Role;
+      const result = await this.db.query<{ username: string; role: string; is_active: boolean }>(
+        `SELECT username, role, is_active FROM users WHERE username = $1 LIMIT 1`,
+        [payload.sub]
+      );
+
+      const account = result.rows[0];
+      if (!account || !account.is_active || account.role !== role) {
+        throw new UnauthorizedException("User account is inactive or missing");
+      }
+
       req.user = { role, subject: payload.sub } as any;
       return true;
     }

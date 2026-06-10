@@ -121,6 +121,33 @@ let ReportsService = class ReportsService {
             vulnerabilities: vulnerabilities.rows
         };
     }
+    async listAlerts() {
+        const result = await this.db.query(`SELECT id, scan_id, container_id, container_name, severity, cve, package_name, title, description,
+              cvss::text, status, source, delivery_status, delivered_at, acknowledged_at, acknowledged_by,
+              delivery_error, created_at
+       FROM alerts
+       ORDER BY created_at DESC
+       LIMIT 100`);
+        return result.rows.map((row) => ({
+            ...row,
+            cvss: Number(row.cvss)
+        }));
+    }
+    async acknowledgeAlert(alertId, username) {
+        const result = await this.db.query(`UPDATE alerts
+       SET status = 'acknowledged', acknowledged_at = NOW(), acknowledged_by = $2
+       WHERE id = $1
+       RETURNING id, scan_id, container_id, container_name, severity, cve, package_name, title, description,
+                 cvss::text, status, source, delivery_status, delivered_at, acknowledged_at, acknowledged_by,
+                 delivery_error, created_at`, [alertId, username]);
+        if (result.rows.length === 0) {
+            throw new common_1.NotFoundException("Alert not found");
+        }
+        return {
+            ...result.rows[0],
+            cvss: Number(result.rows[0].cvss)
+        };
+    }
     async getScansCount() {
         const result = await this.db.query(`SELECT COUNT(*)::text AS count FROM scans`);
         return Number(result.rows[0]?.count ?? 0);

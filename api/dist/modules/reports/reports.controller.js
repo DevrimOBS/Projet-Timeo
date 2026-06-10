@@ -35,6 +35,12 @@ let ReportsController = class ReportsController {
     getContainerDetails(containerId) {
         return this.reportsService.getContainerDetails(containerId);
     }
+    listAlerts() {
+        return this.reportsService.listAlerts();
+    }
+    acknowledgeAlert(alertId, request) {
+        return this.reportsService.acknowledgeAlert(alertId, request.user?.subject ?? "admin");
+    }
 };
 exports.ReportsController = ReportsController;
 __decorate([
@@ -62,6 +68,21 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ReportsController.prototype, "getContainerDetails", null);
+__decorate([
+    (0, common_1.Get)("alerts"),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ReportsController.prototype, "listAlerts", null);
+__decorate([
+    (0, common_1.Post)("alerts/:alertId/ack"),
+    (0, roles_decorator_1.Roles)(role_enum_1.Role.ADMIN),
+    __param(0, (0, common_1.Param)("alertId")),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ReportsController.prototype, "acknowledgeAlert", null);
 exports.ReportsController = ReportsController = __decorate([
     (0, common_1.Controller)("api/reports"),
     (0, common_1.UseGuards)(basic_auth_guard_1.BasicAuthGuard, roles_guard_1.RolesGuard),

@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReportsModule = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
+const database_module_1 = require("../../database/database.module");
 const basic_auth_guard_1 = require("../../common/guards/basic-auth.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
 const reports_controller_1 = require("./reports.controller");
@@ -18,6 +19,7 @@ let ReportsModule = class ReportsModule {
 exports.ReportsModule = ReportsModule;
 exports.ReportsModule = ReportsModule = __decorate([
     (0, common_1.Module)({
+        imports: [database_module_1.DatabaseModule],
         controllers: [reports_controller_1.ReportsController],
         providers: [reports_service_1.ReportsService, core_1.Reflector, basic_auth_guard_1.BasicAuthGuard, roles_guard_1.RolesGuard]
     })

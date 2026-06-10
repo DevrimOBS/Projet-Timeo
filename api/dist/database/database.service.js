@@ -12,7 +12,10 @@ var DatabaseService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DatabaseService = void 0;
 const common_1 = require("@nestjs/common");
+const crypto_1 = require("crypto");
 const pg_1 = require("pg");
+const password_1 = require("../common/utils/password");
+const role_enum_1 = require("../common/enums/role.enum");
 let DatabaseService = DatabaseService_1 = class DatabaseService {
     constructor() {
         this.logger = new common_1.Logger(DatabaseService_1.name);
@@ -53,6 +56,28 @@ let DatabaseService = DatabaseService_1 = class DatabaseService {
         }
     }
     async ensureSchema() {
+        await this.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('admin', 'viewer', 'agent')),
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_login_at TIMESTAMPTZ,
+        mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        mfa_secret TEXT,
+        mfa_pending_secret TEXT,
+        mfa_recovery_codes JSONB NOT NULL DEFAULT '[]'::jsonb,
+        mfa_configured_at TIMESTAMPTZ
+      );
+    `);
+        await this.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE;`);
+        await this.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_secret TEXT;`);
+        await this.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_pending_secret TEXT;`);
+        await this.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_recovery_codes JSONB NOT NULL DEFAULT '[]'::jsonb;`);
+        await this.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_configured_at TIMESTAMPTZ;`);
         await this.query(`
       CREATE TABLE IF NOT EXISTS scans (
         id UUID PRIMARY KEY,
@@ -121,9 +146,64 @@ let DatabaseService = DatabaseService_1 = class DatabaseService {
         message TEXT
       );
     `);
+        await this.query(`
+      CREATE TABLE IF NOT EXISTS alerts (
+        id UUID PRIMARY KEY,
+        scan_id UUID NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+        container_id TEXT NOT NULL,
+        container_name TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        cve TEXT NOT NULL,
+        package_name TEXT NOT NULL,
+        title TEXT,
+        description TEXT,
+        cvss NUMERIC(4,1) NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'acknowledged')),
+        source TEXT NOT NULL DEFAULT 'scan_ingestion',
+        delivery_status TEXT NOT NULL DEFAULT 'pending' CHECK (delivery_status IN ('pending', 'delivered', 'failed', 'skipped')),
+        delivered_at TIMESTAMPTZ,
+        acknowledged_at TIMESTAMPTZ,
+        acknowledged_by TEXT,
+        delivery_error TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (scan_id, container_id, cve)
+      );
+    `);
         await this.query(`CREATE INDEX IF NOT EXISTS idx_scan_tasks_status_requested_at ON scan_tasks (status, requested_at);`);
         await this.query(`CREATE INDEX IF NOT EXISTS idx_scan_containers_scan_id ON scan_containers (scan_id);`);
         await this.query(`CREATE INDEX IF NOT EXISTS idx_vulnerabilities_container_row_id ON vulnerabilities (container_row_id);`);
+        await this.query(`CREATE INDEX IF NOT EXISTS idx_alerts_status_created_at ON alerts (status, created_at DESC);`);
+        await this.query(`CREATE INDEX IF NOT EXISTS idx_alerts_scan_id ON alerts (scan_id);`);
+        await this.ensureDefaultUsers();
+    }
+    async ensureDefaultUsers() {
+        const result = await this.query(`SELECT COUNT(*)::text AS count FROM users`);
+        const count = Number(result.rows[0]?.count ?? "0");
+        if (count > 0) {
+            return;
+        }
+        const bootstrapUsers = [
+            {
+                username: process.env.ADMIN_USER ?? "admin",
+                password: process.env.ADMIN_PASSWORD ?? "admin-pass",
+                role: role_enum_1.Role.ADMIN
+            },
+            {
+                username: process.env.VIEWER_USER ?? "viewer",
+                password: process.env.VIEWER_PASSWORD ?? "viewer-pass",
+                role: role_enum_1.Role.VIEWER
+            },
+            {
+                username: process.env.AGENT_USER ?? "agent",
+                password: process.env.AGENT_PASSWORD ?? "agent-pass",
+                role: role_enum_1.Role.AGENT
+            }
+        ];
+        for (const user of bootstrapUsers) {
+            await this.query(`INSERT INTO users (id, username, password_hash, role, is_active)
+         VALUES ($1, $2, $3, $4, TRUE)
+         ON CONFLICT (username) DO NOTHING`, [(0, crypto_1.randomUUID)(), user.username, (0, password_1.hashPassword)(user.password), user.role]);
+        }
     }
     async ensureSchemaWithRetry() {
         let lastError;

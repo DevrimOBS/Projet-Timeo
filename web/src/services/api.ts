@@ -3,9 +3,12 @@ import {
   ContainerSummary,
   CreateScanTaskPayload,
   MatrixData,
+  MfaSetupData,
   OverviewData,
+  SecurityAlert,
   ScanSchedulerConfig,
   ScanTask,
+  UserAccount,
   UpdateScanSchedulerPayload
 } from "../types";
 
@@ -185,11 +188,20 @@ export const api = {
       method: "POST"
     });
   },
-  async login(username: string, password: string, otp?: string): Promise<{ token: string; expiresIn: string }> {
+  async listAlerts(): Promise<SecurityAlert[]> {
+    return request<SecurityAlert[]>("/api/reports/alerts");
+  },
+  async acknowledgeAlert(alertId: string): Promise<SecurityAlert> {
+    return request<SecurityAlert>(`/api/reports/alerts/${encodeURIComponent(alertId)}/ack`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+  },
+  async login(username: string, password: string, otp?: string, recoveryCode?: string): Promise<{ token: string; expiresIn: string }> {
     const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, otp })
+      body: JSON.stringify({ username, password, otp, recoveryCode })
     });
 
     if (!response.ok) {
@@ -198,6 +210,42 @@ export const api = {
     }
 
     return response.json();
+  },
+  async currentUser(): Promise<UserAccount> {
+    return request<UserAccount>("/api/users/me");
+  },
+  async listUsers(): Promise<UserAccount[]> {
+    return request<UserAccount[]>("/api/users");
+  },
+  async setupMfa(): Promise<MfaSetupData> {
+    return request<MfaSetupData>("/api/users/me/mfa/setup", {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+  },
+  async enableMfa(otp: string): Promise<UserAccount> {
+    return request<UserAccount>("/api/users/me/mfa/enable", {
+      method: "POST",
+      body: JSON.stringify({ otp })
+    });
+  },
+  async disableOwnMfa(payload: { otp?: string; recoveryCode?: string }): Promise<UserAccount> {
+    return request<UserAccount>("/api/users/me/mfa/disable", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+  async rotateRecoveryCodes(otp: string): Promise<{ recoveryCodes: string[] }> {
+    return request<{ recoveryCodes: string[] }>("/api/users/me/mfa/recovery-codes", {
+      method: "POST",
+      body: JSON.stringify({ otp })
+    });
+  },
+  async adminDisableMfa(userId: string): Promise<UserAccount> {
+    return request<UserAccount>(`/api/users/${encodeURIComponent(userId)}/mfa/disable`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
   },
   saveConnectionSettings(apiUrl: string, token: string): void {
     if (typeof window === "undefined") {

@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class LoginDto {
   @IsString()
@@ -8,5 +8,11 @@ export class LoginDto {
   password!: string;
 
   // Optional one-time password for MFA/TOTP
+  @IsOptional()
+  @IsString()
   otp?: string;
+
+  @IsOptional()
+  @IsString()
+  recoveryCode?: string;
 }

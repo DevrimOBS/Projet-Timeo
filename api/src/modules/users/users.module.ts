@@ -3,13 +3,13 @@ import { Reflector } from "@nestjs/core";
 import { DatabaseModule } from "../../database/database.module";
 import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
-import { ScansController } from "./scans.controller";
-import { ScansService } from "./scans.service";
+import { UsersController } from "./users.controller";
+import { UsersService } from "./users.service";
 
 @Module({
-  imports: [DatabaseModule],
-  controllers: [ScansController],
-  providers: [ScansService, Reflector, BasicAuthGuard, RolesGuard],
-  exports: [ScansService]
+	imports: [DatabaseModule],
+	controllers: [UsersController],
+	providers: [UsersService, Reflector, BasicAuthGuard, RolesGuard],
+	exports: [UsersService]
 })
-export class ScansModule {}
+export class UsersModule {}

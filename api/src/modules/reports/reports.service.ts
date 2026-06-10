@@ -177,6 +177,81 @@ export class ReportsService {
     };
   }
 
+  async listAlerts() {
+    const result = await this.db.query<{
+      id: string;
+      scan_id: string;
+      container_id: string;
+      container_name: string;
+      severity: string;
+      cve: string;
+      package_name: string;
+      title: string | null;
+      description: string | null;
+      cvss: string;
+      status: string;
+      source: string;
+      delivery_status: string;
+      delivered_at: string | null;
+      acknowledged_at: string | null;
+      acknowledged_by: string | null;
+      delivery_error: string | null;
+      created_at: string;
+    }>(
+      `SELECT id, scan_id, container_id, container_name, severity, cve, package_name, title, description,
+              cvss::text, status, source, delivery_status, delivered_at, acknowledged_at, acknowledged_by,
+              delivery_error, created_at
+       FROM alerts
+       ORDER BY created_at DESC
+       LIMIT 100`
+    );
+
+    return result.rows.map((row) => ({
+      ...row,
+      cvss: Number(row.cvss)
+    }));
+  }
+
+  async acknowledgeAlert(alertId: string, username: string) {
+    const result = await this.db.query<{
+      id: string;
+      scan_id: string;
+      container_id: string;
+      container_name: string;
+      severity: string;
+      cve: string;
+      package_name: string;
+      title: string | null;
+      description: string | null;
+      cvss: string;
+      status: string;
+      source: string;
+      delivery_status: string;
+      delivered_at: string | null;
+      acknowledged_at: string | null;
+      acknowledged_by: string | null;
+      delivery_error: string | null;
+      created_at: string;
+    }>(
+      `UPDATE alerts
+       SET status = 'acknowledged', acknowledged_at = NOW(), acknowledged_by = $2
+       WHERE id = $1
+       RETURNING id, scan_id, container_id, container_name, severity, cve, package_name, title, description,
+                 cvss::text, status, source, delivery_status, delivered_at, acknowledged_at, acknowledged_by,
+                 delivery_error, created_at`,
+      [alertId, username]
+    );
+
+    if (result.rows.length === 0) {
+      throw new NotFoundException("Alert not found");
+    }
+
+    return {
+      ...result.rows[0],
+      cvss: Number(result.rows[0].cvss)
+    };
+  }
+
   private async getScansCount(): Promise<number> {
     const result = await this.db.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM scans`);
     return Number(result.rows[0]?.count ?? 0);

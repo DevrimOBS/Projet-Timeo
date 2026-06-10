@@ -10,6 +10,7 @@ export default function Login({ onClose, onSuccess }: Props) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +19,7 @@ export default function Login({ onClose, onSuccess }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.login(username, password, otp || undefined);
+      const res = await api.login(username, password, otp || undefined, recoveryCode || undefined);
       api.saveConnectionSettings(api.getApiBaseUrl(), res.token);
       onSuccess(res.token);
       onClose();
@@ -45,6 +46,10 @@ export default function Login({ onClose, onSuccess }: Props) {
           <label className="form-label">
             OTP (optionnel)
             <input value={otp} onChange={(e) => setOtp(e.target.value)} />
+          </label>
+          <label className="form-label">
+            Code de secours (optionnel)
+            <input value={recoveryCode} onChange={(e) => setRecoveryCode(e.target.value)} />
           </label>
 
           {error ? <p className="muted error">{error}</p> : null}

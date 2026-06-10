@@ -766,6 +766,78 @@ textarea {
   border-radius: 12px;
 }
 
+.modal-wide {
+  width: min(980px, calc(100% - 40px));
+}
+
+.mfa-modal {
+  display: grid;
+  gap: 16px;
+  max-height: calc(100vh - 60px);
+  overflow: auto;
+}
+
+.mfa-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+}
+
+.mfa-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  display: grid;
+  gap: 14px;
+}
+
+.mfa-panel h4 {
+  margin: 0;
+}
+
+.mfa-actions,
+.mfa-inline-actions {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.grow {
+  flex: 1;
+}
+
+.mfa-secret-box {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 10px;
+}
+
+.recovery-code-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recovery-code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--accent-2);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.success-text {
+  color: var(--accent-2);
+}
+
 .modal .muted.error {
   color: var(--danger);
 }
@@ -799,6 +871,10 @@ textarea {
   .connection-panel {
     grid-template-columns: 1fr;
   }
+
+  .mfa-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -820,6 +896,10 @@ textarea {
 
   .metric-grid,
   .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recovery-code-grid {
     grid-template-columns: 1fr;
   }
 }

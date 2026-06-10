@@ -1,8 +1,9 @@
-import { Controller, Get, Inject, Param, UseGuards } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Role } from "../../common/enums/role.enum";
 import { BasicAuthGuard } from "../../common/guards/basic-auth.guard";
 import { RolesGuard } from "../../common/guards/roles.guard";
+import type { RequestWithUser } from "../../common/types/request-with-user";
 import { ReportsService } from "./reports.service";
 
 @Controller("api/reports")
@@ -29,5 +30,16 @@ export class ReportsController {
   @Get("details/:containerId")
   getContainerDetails(@Param("containerId") containerId: string) {
     return this.reportsService.getContainerDetails(containerId);
+  }
+
+  @Get("alerts")
+  listAlerts() {
+    return this.reportsService.listAlerts();
+  }
+
+  @Post("alerts/:alertId/ack")
+  @Roles(Role.ADMIN)
+  acknowledgeAlert(@Param("alertId") alertId: string, @Req() request: RequestWithUser) {
+    return this.reportsService.acknowledgeAlert(alertId, request.user?.subject ?? "admin");
   }
 }

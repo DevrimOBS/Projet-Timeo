@@ -5,6 +5,7 @@ import Containers from "./pages/Containers";
 import Reports from "./pages/Reports";
 import Vulnerabilities from "./pages/Vulnerabilities";
 import Login from "./components/Login";
+import MfaSettings from "./components/MfaSettings";
 import { api } from "./services/api";
 import {
 	ContainerDetails,
@@ -12,8 +13,10 @@ import {
 	ContainerSummary,
 	MatrixData,
 	OverviewData,
+	SecurityAlert,
 	ScanSchedulerConfig,
-	ScanTask
+	ScanTask,
+	UserAccount
 } from "./types";
 import "./styles.css";
 
@@ -23,6 +26,7 @@ function App() {
 	const [overview, setOverview] = useState<OverviewData | null>(null);
 	const [matrix, setMatrix] = useState<MatrixData | null>(null);
 	const [tasks, setTasks] = useState<ScanTask[]>([]);
+	const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
 	const [schedulerConfig, setSchedulerConfig] = useState<ScanSchedulerConfig | null>(null);
 	const [containers, setContainers] = useState<ContainerSummary[]>([]);
 	const [containerSeverityData, setContainerSeverityData] = useState<ContainerSeverityData[]>([]);
@@ -34,24 +38,30 @@ function App() {
 	const [apiUrl, setApiUrl] = useState(api.getApiBaseUrl());
 	const [token, setToken] = useState(api.getToken());
 	const [showLogin, setShowLogin] = useState(false);
+	const [showMfaSettings, setShowMfaSettings] = useState(false);
+	const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
 
 	async function loadData(containerId = selectedContainerId) {
 		setLoading(true);
 		setError(null);
 		try {
-			const [nextOverview, nextMatrix, nextTasks, nextContainers, nextSchedulerConfig] = await Promise.all([
+			const [nextOverview, nextMatrix, nextTasks, nextAlerts, nextContainers, nextSchedulerConfig, nextCurrentUser] = await Promise.all([
 				api.overview(),
 				api.matrix(),
 				api.listTasks(),
+				api.listAlerts(),
 				api.containers(),
-				api.schedulerConfig()
+				api.schedulerConfig(),
+				api.currentUser()
 			]);
 
 			setOverview(nextOverview);
 			setMatrix(nextMatrix);
 			setTasks(nextTasks);
+			setAlerts(nextAlerts);
 			setContainers(nextContainers);
 			setSchedulerConfig(nextSchedulerConfig);
+			setCurrentUser(nextCurrentUser);
 
 			const detailsByContainer = new Map<string, ContainerDetails>();
 			const nextContainerSeverityData: ContainerSeverityData[] = [];
@@ -174,6 +184,11 @@ function App() {
 						<button className="button button-secondary" onClick={() => setShowLogin(true)} type="button">
 							Connexion
 						</button>
+						{currentUser ? (
+							<button className="button button-secondary" onClick={() => setShowMfaSettings(true)} type="button">
+								MFA
+							</button>
+						) : null}
 					</div>
 				</div>
 
@@ -183,6 +198,17 @@ function App() {
 					<Login
 						onClose={() => setShowLogin(false)}
 						onSuccess={(t) => handleLoginSuccess(t)}
+					/>
+				) : null}
+
+				{showMfaSettings && currentUser ? (
+					<MfaSettings
+						currentUser={currentUser}
+						onClose={() => setShowMfaSettings(false)}
+						onUserUpdated={(user) => {
+							setCurrentUser(user);
+							void loadData();
+						}}
 					/>
 				) : null}
 
@@ -216,6 +242,8 @@ function App() {
 					{activeTab === "reports" ? (
 						<Reports
 							tasks={tasks}
+							alerts={alerts}
+							currentUserRole={currentUser?.role ?? "viewer"}
 							schedulerConfig={schedulerConfig}
 							loading={loading}
 							onRefresh={() => void loadData()}
@@ -228,6 +256,9 @@ function App() {
 							}}
 							onTriggerSchedulerNow={async () => {
 								await api.triggerSchedulerNow();
+							}}
+							onAcknowledgeAlert={async (alertId) => {
+								await api.acknowledgeAlert(alertId);
 							}}
 						/>
 					) : null}

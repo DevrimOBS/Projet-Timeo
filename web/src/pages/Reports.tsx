@@ -1,24 +1,30 @@
 import { useEffect, useState } from "react";
-import { CreateScanTaskPayload, ScanSchedulerConfig, ScanTask, UpdateScanSchedulerPayload } from "../types";
+import { CreateScanTaskPayload, ScanSchedulerConfig, ScanTask, SecurityAlert, UpdateScanSchedulerPayload } from "../types";
 
 interface Props {
   tasks: ScanTask[];
+  alerts: SecurityAlert[];
+  currentUserRole: string;
   schedulerConfig: ScanSchedulerConfig | null;
   loading: boolean;
   onRefresh: () => void;
   onCreateTask: (payload: CreateScanTaskPayload) => Promise<void>;
   onUpdateSchedulerConfig: (payload: UpdateScanSchedulerPayload) => Promise<void>;
   onTriggerSchedulerNow: () => Promise<void>;
+  onAcknowledgeAlert: (alertId: string) => Promise<void>;
 }
 
 export default function Reports({
   tasks,
+  alerts,
+  currentUserRole,
   schedulerConfig,
   loading,
   onRefresh,
   onCreateTask,
   onUpdateSchedulerConfig,
-  onTriggerSchedulerNow
+  onTriggerSchedulerNow,
+  onAcknowledgeAlert
 }: Props) {
   const [mode, setMode] = useState<CreateScanTaskPayload["mode"]>("MANUAL_GLOBAL");
   const [containerIds, setContainerIds] = useState("api,web");
@@ -35,6 +41,7 @@ export default function Reports({
   const [schedulerRequestedBy, setSchedulerRequestedBy] = useState<string>(schedulerConfig?.requested_by ?? "system:scheduler");
   const [schedulerMessage, setSchedulerMessage] = useState<string>(schedulerConfig?.message ?? "Scan automatique planifie");
   const [schedulerContainerIds, setSchedulerContainerIds] = useState<string>((schedulerConfig?.container_ids ?? []).join(","));
+  const [alertSubmittingId, setAlertSubmittingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!schedulerConfig) {
@@ -118,6 +125,20 @@ export default function Reports({
     }
   }
 
+  async function handleAcknowledgeAlert(alertId: string) {
+    setAlertSubmittingId(alertId);
+    setNotice(null);
+    try {
+      await onAcknowledgeAlert(alertId);
+      setNotice("Alerte acquittee.");
+      onRefresh();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Impossible d'acquitter l'alerte.");
+    } finally {
+      setAlertSubmittingId(null);
+    }
+  }
+
   return (
     <section className="panel split-grid reports-grid">
       <div className="glass-card stack">
@@ -149,6 +170,41 @@ export default function Reports({
                   <span>Conteneurs: {(task.container_ids ?? []).length}</span>
                   <span>{new Date(task.requested_at).toLocaleString("fr-FR")}</span>
                 </div>
+              </article>
+            ))
+          )}
+        </div>
+
+        <div className="stack reports-subsection">
+          <h3>Alertes critiques automatiques</h3>
+          {loading ? (
+            <p className="muted">Chargement des alertes…</p>
+          ) : alerts.length === 0 ? (
+            <p className="muted">Aucune alerte critique pour le moment.</p>
+          ) : (
+            alerts.map((alert) => (
+              <article key={alert.id} className="task-card">
+                <div className="vuln-top">
+                  <strong>{alert.cve} · {alert.container_name}</strong>
+                  <span className={`severity severity-${alert.status}`}>{alert.status}</span>
+                </div>
+                <p>{alert.title ?? `Package: ${alert.package_name} · CVSS ${alert.cvss}`}</p>
+                <div className="meta-grid">
+                  <span>Delivery: {alert.delivery_status}</span>
+                  <span>Scan: {alert.scan_id}</span>
+                  <span>{new Date(alert.created_at).toLocaleString("fr-FR")}</span>
+                </div>
+                {alert.delivery_error ? <p className="muted">Webhook: {alert.delivery_error}</p> : null}
+                {currentUserRole === "admin" && alert.status === "open" ? (
+                  <button
+                    className="button button-secondary"
+                    type="button"
+                    onClick={() => void handleAcknowledgeAlert(alert.id)}
+                    disabled={alertSubmittingId === alert.id}
+                  >
+                    {alertSubmittingId === alert.id ? "Acquittement…" : "Acquitter"}
+                  </button>
+                ) : null}
               </article>
             ))
           )}

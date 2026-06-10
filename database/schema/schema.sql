@@ -1,3 +1,19 @@
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'viewer', 'agent')),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_login_at TIMESTAMPTZ,
+  mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  mfa_secret TEXT,
+  mfa_pending_secret TEXT,
+  mfa_recovery_codes JSONB NOT NULL DEFAULT '[]'::jsonb,
+  mfa_configured_at TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS scans (
   id UUID PRIMARY KEY,
   agent_id TEXT NOT NULL,
@@ -59,4 +75,26 @@ CREATE TABLE IF NOT EXISTS scan_tasks (
   scan_id UUID REFERENCES scans(id) ON DELETE SET NULL,
   target_container_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
   message TEXT
+);
+
+CREATE TABLE IF NOT EXISTS alerts (
+  id UUID PRIMARY KEY,
+  scan_id UUID NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
+  container_id TEXT NOT NULL,
+  container_name TEXT NOT NULL,
+  severity TEXT NOT NULL,
+  cve TEXT NOT NULL,
+  package_name TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  cvss NUMERIC(4,1) NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'acknowledged')),
+  source TEXT NOT NULL DEFAULT 'scan_ingestion',
+  delivery_status TEXT NOT NULL DEFAULT 'pending' CHECK (delivery_status IN ('pending', 'delivered', 'failed', 'skipped')),
+  delivered_at TIMESTAMPTZ,
+  acknowledged_at TIMESTAMPTZ,
+  acknowledged_by TEXT,
+  delivery_error TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (scan_id, container_id, cve)
 );
