@@ -67,11 +67,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_PROXY_TARGET=https://api:3001
-      - VITE_HTTPS_ENABLED=true
-      - VITE_HTTPS_KEY_FILE=/certs/server.key
-      - VITE_HTTPS_CERT_FILE=/certs/server.crt
-    volumes:
-      - ./certs:/certs:ro
+      - VITE_HTTPS_ENABLED=false
     networks:
       - novisec-net
 
@@ -88,7 +84,7 @@ services:
     networks:
       - novisec-net
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432" # Expose uniquement sur localhost pour des raisons de sécurité
 
   cve-updater:
     image: aquasec/trivy:0.44.1
